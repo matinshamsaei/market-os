@@ -4,7 +4,7 @@ services:
     container_name: marketos-postgres
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - '5433:5432'
     environment:
       POSTGRES_USER: marketos
       POSTGRES_PASSWORD: marketos
@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U marketos"]
+      test: ['CMD-SHELL', 'pg_isready -U marketos']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,12 +23,12 @@ services:
     container_name: marketos-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
 
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
