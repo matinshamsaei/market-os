@@ -1,36 +1,36 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 
-import { UsersController } from './users.controller';
-import { UsersService } from './users.service';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 
-describe('UsersController', () => {
-  let controller: UsersController;
+describe('AuthController', () => {
+  let controller: AuthController;
 
-  const mockUsersService = {
+  const mockAuthService = {
     register: jest.fn(),
     login: jest.fn(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [UsersController],
+      controllers: [AuthController],
       providers: [
         {
-          provide: UsersService,
-          useValue: mockUsersService,
+          provide: AuthService,
+          useValue: mockAuthService,
         },
       ],
     }).compile();
 
-    controller = module.get<UsersController>(UsersController);
+    controller = module.get<AuthController>(AuthController);
 
     jest.clearAllMocks();
   });
 
   describe('register', () => {
-    it('should call usersService.register', async () => {
-      mockUsersService.register.mockResolvedValue({
+    it('should call authService.register', async () => {
+      mockAuthService.register.mockResolvedValue({
         token: 'jwt-token',
         user: {
           id: '1',
@@ -44,17 +44,17 @@ describe('UsersController', () => {
         password: 'password',
       });
 
-      expect(mockUsersService.register).toHaveBeenCalledWith(
-        'test@test.com',
-        'password',
-        undefined,
-      );
+      expect(mockAuthService.register).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password',
+        role: undefined,
+      });
 
       expect(response.token).toBe('jwt-token');
     });
 
     it('should pass role when provided', async () => {
-      mockUsersService.register.mockResolvedValue({
+      mockAuthService.register.mockResolvedValue({
         token: 'jwt-token',
         user: {
           id: '1',
@@ -69,17 +69,17 @@ describe('UsersController', () => {
         role: UserRole.VENDOR,
       });
 
-      expect(mockUsersService.register).toHaveBeenCalledWith(
-        'vendor@test.com',
-        'password',
-        UserRole.VENDOR,
-      );
+      expect(mockAuthService.register).toHaveBeenCalledWith({
+        email: 'vendor@test.com',
+        password: 'password',
+        role: UserRole.VENDOR,
+      });
     });
   });
 
   describe('login', () => {
-    it('should call usersService.login', async () => {
-      mockUsersService.login.mockResolvedValue({
+    it('should call authService.login', async () => {
+      mockAuthService.login.mockResolvedValue({
         token: 'jwt-token',
         user: {
           id: '1',
@@ -93,13 +93,16 @@ describe('UsersController', () => {
         password: 'password',
       });
 
-      expect(mockUsersService.login).toHaveBeenCalledWith('test@test.com', 'password');
+      expect(mockAuthService.login).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password',
+      });
 
       expect(response.token).toBe('jwt-token');
     });
 
     it('should return authenticated user response', async () => {
-      mockUsersService.login.mockResolvedValue({
+      mockAuthService.login.mockResolvedValue({
         token: 'jwt-token',
         user: {
           id: '1',

@@ -5,13 +5,13 @@ import * as bcrypt from 'bcrypt';
 
 import { UserRole } from '@prisma/client';
 
-import { UsersRepository } from './users.repository';
-import { UsersService } from './users.service';
+import { UsersRepository } from '../users/users.repository';
+import { AuthService } from './auth.service';
 
 describe('UsersService', () => {
-  let service: UsersService;
+  let service: AuthService;
 
-  const mockUsersRepository = {
+  const mockAuthRepository = {
     findByEmail: jest.fn(),
     create: jest.fn(),
   };
@@ -23,10 +23,10 @@ describe('UsersService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        UsersService,
+        AuthService,
         {
           provide: UsersRepository,
-          useValue: mockUsersRepository,
+          useValue: mockAuthRepository,
         },
         {
           provide: JwtService,
@@ -35,16 +35,16 @@ describe('UsersService', () => {
       ],
     }).compile();
 
-    service = module.get<UsersService>(UsersService);
+    service = module.get<AuthService>(AuthService);
 
     jest.clearAllMocks();
   });
 
   describe('register', () => {
     it('should create a new user and return token', async () => {
-      mockUsersRepository.findByEmail.mockResolvedValue(null);
+      mockAuthRepository.findByEmail.mockResolvedValue(null);
 
-      mockUsersRepository.create.mockResolvedValue({
+      mockAuthRepository.create.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: 'hashed-password',
@@ -53,23 +53,23 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       });
 
-      const response = await service.register('test@test.com', 'password');
+      const response = await service.register({ email: 'test@test.com', password: 'password' });
 
       expect(response.token).toBe('fake-jwt-token');
       expect(response.user.email).toBe('test@test.com');
 
-      expect(mockUsersRepository.create).toHaveBeenCalled();
+      expect(mockAuthRepository.create).toHaveBeenCalled();
     });
 
     it('should throw if email already exists', async () => {
-      mockUsersRepository.findByEmail.mockResolvedValue({
+      mockAuthRepository.findByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
       });
 
-      await expect(service.register('test@test.com', 'password')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.register({ email: 'test@test.com', password: 'password' }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -77,7 +77,7 @@ describe('UsersService', () => {
     it('should return user and token', async () => {
       const hashedPassword = await bcrypt.hash('password', 10);
 
-      mockUsersRepository.findByEmail.mockResolvedValue({
+      mockAuthRepository.findByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: hashedPassword,
@@ -86,7 +86,7 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       });
 
-      const response = await service.login('test@test.com', 'password');
+      const response = await service.login({ email: 'test@test.com', password: 'password' });
 
       expect(response.token).toBe('fake-jwt-token');
       expect(response.user.email).toBe('test@test.com');
@@ -95,7 +95,7 @@ describe('UsersService', () => {
     it('should throw when password is incorrect', async () => {
       const hashedPassword = await bcrypt.hash('password', 10);
 
-      mockUsersRepository.findByEmail.mockResolvedValue({
+      mockAuthRepository.findByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: hashedPassword,
@@ -104,9 +104,9 @@ describe('UsersService', () => {
         updatedAt: new Date(),
       });
 
-      await expect(service.login('test@test.com', 'wrong-password')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(
+        service.login({ email: 'test@test.com', password: 'wrong-password' }),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
