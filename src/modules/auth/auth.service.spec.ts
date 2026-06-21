@@ -5,15 +5,16 @@ import * as bcrypt from 'bcrypt';
 
 import { UserRole } from '@prisma/client';
 
-import { UsersRepository } from '../users/users.repository';
+import { UsersService } from '../users/users.service';
+
 import { AuthService } from './auth.service';
 
-describe('UsersService', () => {
+describe('AuthService', () => {
   let service: AuthService;
 
-  const mockAuthRepository = {
-    findByEmail: jest.fn(),
-    create: jest.fn(),
+  const mockUsersService = {
+    findUserByEmail: jest.fn(),
+    registerUser: jest.fn(),
   };
 
   const mockJwtService = {
@@ -25,8 +26,8 @@ describe('UsersService', () => {
       providers: [
         AuthService,
         {
-          provide: UsersRepository,
-          useValue: mockAuthRepository,
+          provide: UsersService,
+          useValue: mockUsersService,
         },
         {
           provide: JwtService,
@@ -42,9 +43,9 @@ describe('UsersService', () => {
 
   describe('register', () => {
     it('should create a new user and return token', async () => {
-      mockAuthRepository.findByEmail.mockResolvedValue(null);
+      mockUsersService.findUserByEmail.mockResolvedValue(null);
 
-      mockAuthRepository.create.mockResolvedValue({
+      mockUsersService.registerUser.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: 'hashed-password',
@@ -58,11 +59,11 @@ describe('UsersService', () => {
       expect(response.token).toBe('fake-jwt-token');
       expect(response.user.email).toBe('test@test.com');
 
-      expect(mockAuthRepository.create).toHaveBeenCalled();
+      expect(mockUsersService.registerUser).toHaveBeenCalled();
     });
 
     it('should throw if email already exists', async () => {
-      mockAuthRepository.findByEmail.mockResolvedValue({
+      mockUsersService.findUserByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
       });
@@ -77,7 +78,7 @@ describe('UsersService', () => {
     it('should return user and token', async () => {
       const hashedPassword = await bcrypt.hash('password', 10);
 
-      mockAuthRepository.findByEmail.mockResolvedValue({
+      mockUsersService.findUserByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: hashedPassword,
@@ -95,7 +96,7 @@ describe('UsersService', () => {
     it('should throw when password is incorrect', async () => {
       const hashedPassword = await bcrypt.hash('password', 10);
 
-      mockAuthRepository.findByEmail.mockResolvedValue({
+      mockUsersService.findUserByEmail.mockResolvedValue({
         id: '1',
         email: 'test@test.com',
         password: hashedPassword,
