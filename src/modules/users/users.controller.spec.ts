@@ -1,9 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { JwtService } from '@nestjs/jwt';
 
 import { UserRole } from '@prisma/client';
 
 import { UsersController } from './users.controller';
+import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
 
 describe('UsersController', () => {
@@ -13,8 +15,25 @@ describe('UsersController', () => {
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [UsersService],
+      providers: [
+        UsersService,
+        {
+          provide: UsersRepository,
+          useValue: {
+            findByEmail: jest.fn(),
+            create: jest.fn(),
+            findById: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            signAsync: jest.fn().mockResolvedValue('fake-jwt-token'),
+          },
+        },
+      ],
     }).compile();
+
     usersController = module.get<UsersController>(UsersController);
     usersService = module.get<UsersService>(UsersService);
   });
