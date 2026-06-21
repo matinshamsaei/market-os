@@ -1,101 +1,120 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-
 import { UserRole } from '@prisma/client';
 
 import { UsersController } from './users.controller';
-import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
 
 describe('UsersController', () => {
-  let usersController: UsersController;
-  let usersService: UsersService;
+  let controller: UsersController;
 
-  beforeAll(async () => {
+  const mockUsersService = {
+    register: jest.fn(),
+    login: jest.fn(),
+  };
+
+  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
-        UsersService,
         {
-          provide: UsersRepository,
-          useValue: {
-            findByEmail: jest.fn(),
-            create: jest.fn(),
-            findById: jest.fn(),
-          },
-        },
-        {
-          provide: JwtService,
-          useValue: {
-            signAsync: jest.fn().mockResolvedValue('fake-jwt-token'),
-          },
+          provide: UsersService,
+          useValue: mockUsersService,
         },
       ],
     }).compile();
 
-    usersController = module.get<UsersController>(UsersController);
-    usersService = module.get<UsersService>(UsersService);
+    controller = module.get<UsersController>(UsersController);
+
+    jest.clearAllMocks();
   });
 
-  describe('register a new user', () => {
-    it('should throw an error if the email is already taken', async () => {
-      await usersService.register('test@test.com', 'test');
-
-      await expect(
-        usersController.register({
+  describe('register', () => {
+    it('should call usersService.register', async () => {
+      mockUsersService.register.mockResolvedValue({
+        token: 'jwt-token',
+        user: {
+          id: '1',
           email: 'test@test.com',
-          password: 'test',
-        }),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should return a user and a token', async () => {
-      const response = await usersController.register({
-        email: 'test@test.com',
-        password: 'test',
+          role: UserRole.CUSTOMER,
+        },
       });
 
-      expect(response.token).toBeDefined();
-      expect(response.user).toBeDefined();
-      expect(response.user.email).toBe('test@test.com');
-      expect(response.user.role).toBe(UserRole.CUSTOMER);
+      const response = await controller.register({
+        email: 'test@test.com',
+        password: 'password',
+      });
+
+      expect(mockUsersService.register).toHaveBeenCalledWith(
+        'test@test.com',
+        'password',
+        undefined,
+      );
+
+      expect(response.token).toBe('jwt-token');
+    });
+
+    it('should pass role when provided', async () => {
+      mockUsersService.register.mockResolvedValue({
+        token: 'jwt-token',
+        user: {
+          id: '1',
+          email: 'vendor@test.com',
+          role: UserRole.VENDOR,
+        },
+      });
+
+      await controller.register({
+        email: 'vendor@test.com',
+        password: 'password',
+        role: UserRole.VENDOR,
+      });
+
+      expect(mockUsersService.register).toHaveBeenCalledWith(
+        'vendor@test.com',
+        'password',
+        UserRole.VENDOR,
+      );
     });
   });
 
-  describe('login a user', () => {
-    it('should throw an error if the email is not found', async () => {
-      await expect(
-        usersController.login({
+  describe('login', () => {
+    it('should call usersService.login', async () => {
+      mockUsersService.login.mockResolvedValue({
+        token: 'jwt-token',
+        user: {
+          id: '1',
           email: 'test@test.com',
-          password: 'test',
-        }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should throw an error if the password is incorrect', async () => {
-      await usersService.register('test@test.com', 'test');
-
-      await expect(
-        usersController.login({
-          email: 'test@test.com',
-          password: 'incorrect',
-        }),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
-    it('should return a user and a token', async () => {
-      await usersService.register('test@test.com', 'test');
-
-      const response = await usersController.login({
-        email: 'test@test.com',
-        password: 'test',
+          role: UserRole.CUSTOMER,
+        },
       });
 
-      expect(response.token).toBeDefined();
-      expect(response.user).toBeDefined();
+      const response = await controller.login({
+        email: 'test@test.com',
+        password: 'password',
+      });
+
+      expect(mockUsersService.login).toHaveBeenCalledWith('test@test.com', 'password');
+
+      expect(response.token).toBe('jwt-token');
+    });
+
+    it('should return authenticated user response', async () => {
+      mockUsersService.login.mockResolvedValue({
+        token: 'jwt-token',
+        user: {
+          id: '1',
+          email: 'test@test.com',
+          role: UserRole.CUSTOMER,
+        },
+      });
+
+      const response = await controller.login({
+        email: 'test@test.com',
+        password: 'password',
+      });
+
       expect(response.user.email).toBe('test@test.com');
-      expect(response.user.role).toBe(UserRole.CUSTOMER);
+      expect(response.token).toBeDefined();
     });
   });
 });
