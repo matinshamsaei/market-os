@@ -1,9 +1,8 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { UserRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-
-import { UserRole } from '@prisma/client';
 
 import { UsersService } from '../users/users.service';
 

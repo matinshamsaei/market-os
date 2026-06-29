@@ -16,6 +16,12 @@
     "baseUrl": "./",
     "incremental": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["src/*"],
+      "@/shared/*": ["src/shared/*"],
+      "@/modules/*": ["src/modules/*"],
+      "@/database/*": ["src/database/*"]
+    }
   }
 }

@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
-
 import { User, Prisma } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../database/prisma/prisma.service';
 
@@ -22,5 +21,10 @@ export class UsersRepository {
     return this.prisma.user.findUnique({
       where: { id },
     });
+  }
+
+  stripPasswordFromUser(user: User): Omit<User, 'password'> {
+    const { password: _, ...rest } = user;
+    return rest;
   }
 }
