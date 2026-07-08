@@ -11,4 +11,12 @@ export class ProductsRepository {
   create(data: Prisma.ProductCreateInput): Promise<Product> {
     return this.prisma.product.create({ data });
   }
+
+  update(id: string, data: Prisma.ProductUpdateInput): Promise<Product> {
+    return this.prisma.product.update({ where: { id }, data });
+  }
+
+  findById(id: string) {
+    return this.prisma.product.findUnique({ where: { id } });
+  }
 }

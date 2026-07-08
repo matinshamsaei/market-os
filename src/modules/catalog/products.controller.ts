@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
 
 import { UserRole } from '@prisma/client';
 
@@ -10,7 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/products';
+import { CreateProductDto, UpdateProductDto } from './dto/products';
 
 @Controller('products')
 export class ProductsController {
@@ -19,7 +19,18 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
-  createProduct(@Body() createProductPayload: CreateProductDto, @CurrentUser() user: TokenPayload) {
-    return this.productsService.createProduct(createProductPayload, user.userId);
+  createProduct(@Body() body: CreateProductDto, @CurrentUser() user: TokenPayload) {
+    return this.productsService.createProduct(body, user.userId);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  updateProduct(
+    @Param('id') id: string,
+    @Body() body: UpdateProductDto,
+    @CurrentUser() user: TokenPayload,
+  ) {
+    return this.productsService.updateProduct(id, body, user);
   }
 }
