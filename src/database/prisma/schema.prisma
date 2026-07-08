@@ -38,9 +38,9 @@ enum ProductStatus {
 model Product {
   id           String   @id @default(uuid())
   title        String
-  description  String
+  description  String?
   price        Float
-  status       ProductStatus @default(DRAFT)
+  status       ProductStatus? @default(DRAFT)
 
   vendor       User     @relation(fields: [vendorId], references: [id])
   vendorId     String
