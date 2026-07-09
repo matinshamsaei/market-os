@@ -3,6 +3,7 @@ import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryParamsDto } from '@/shared/pagination';
 
 import { PRODUCT_SORT_FIELDS } from '../constants';
+import { Product } from '@prisma/client';
 
 export class GetProductsQueryParamsDto extends PaginationQueryParamsDto {
   @IsOptional()
@@ -18,3 +19,12 @@ export class GetProductsQueryParamsDto extends PaginationQueryParamsDto {
   @MaxLength(128)
   search?: string;
 }
+
+export type PublicVendorDto = {
+  id: string;
+  email: string;
+};
+
+export type GetProductByIdResponseDto = Partial<Product> & {
+  vendor?: PublicVendorDto;
+};

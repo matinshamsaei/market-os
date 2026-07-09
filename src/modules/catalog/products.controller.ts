@@ -12,6 +12,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 
 import {
   CreateProductDto,
+  GetProductByIdResponseDto,
   GetProductsQueryParamsDto,
   UpdateProductDto,
   UpdateProductStatusDto,
@@ -25,6 +26,14 @@ export class ProductsController {
   @Get()
   getProducts(@Query() query: GetProductsQueryParamsDto): Promise<PaginatedResult<Product>> {
     return this.productsService.getPublishedProducts(query);
+  }
+
+  @Get(':id')
+  getProductById(
+    @Param('id') id: string,
+    @CurrentUser() user: TokenPayload,
+  ): Promise<GetProductByIdResponseDto> {
+    return this.productsService.getProductById(id, user);
   }
 
   @Post()

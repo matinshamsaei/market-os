@@ -10,7 +10,7 @@ import { paginate } from '@/shared/pagination';
 
 import type { PaginatedResult } from '@/shared/pagination';
 
-import { GetProductsQueryParamsDto } from './dto';
+import { GetProductsQueryParamsDto, PublicVendorDto } from './dto';
 import { PRODUCT_SORT_FIELDS } from './constants';
 
 @Injectable()
@@ -47,7 +47,14 @@ export class ProductsRepository {
     return this.prisma.product.update({ where: { id }, data });
   }
 
-  findById(id: string) {
-    return this.prisma.product.findUnique({ where: { id } });
+  findById(id: string, options?: Omit<Prisma.ProductFindUniqueArgs, 'where'>) {
+    return this.prisma.product.findUnique({ where: { id }, ...options });
+  }
+
+  findByIdWithVendor(id: string): Promise<Product & { vendor: PublicVendorDto }> {
+    return this.prisma.product.findUnique({
+      where: { id },
+      include: { vendor: { select: { id: true, email: true } } },
+    });
   }
 }

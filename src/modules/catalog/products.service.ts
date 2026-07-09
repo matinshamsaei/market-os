@@ -12,12 +12,13 @@ import { isObjectEmpty } from '@/shared/utils';
 
 import {
   CreateProductDto,
+  GetProductByIdResponseDto,
   GetProductsQueryParamsDto,
   UpdateProductDto,
   UpdateProductStatusDto,
 } from './dto';
+import { ALLOWED_STATUS_TRANSITIONS, DEFAULT_PRODUCT_STATUS } from './constants';
 import { ProductsRepository } from './products.repository';
-import { ALLOWED_STATUS_TRANSITIONS } from './constants';
 
 @Injectable()
 export class ProductsService {
@@ -27,11 +28,37 @@ export class ProductsService {
     return this.productsRepository.findAllPublishedProducts(query);
   }
 
+  async getProductById(id: string, user: TokenPayload): Promise<GetProductByIdResponseDto> {
+    const product = await this.productsRepository.findByIdWithVendor(id);
+
+    if (
+      !product ||
+      ((user?.role === UserRole.CUSTOMER || !user) && product.status !== ProductStatus.PUBLISHED)
+    ) {
+      throw new NotFoundException('Product not found!');
+    }
+
+    if (user?.role === UserRole.VENDOR && user?.userId !== product.vendorId) {
+      throw new ForbiddenException('You are not allowed to view this product!');
+    }
+
+    const canViewStatus =
+      user?.role === UserRole.ADMIN ||
+      (user?.role === UserRole.VENDOR && user?.userId === product.vendorId);
+
+    const { status, ...rest } = product;
+
+    return {
+      ...rest,
+      ...(canViewStatus ? { status } : {}),
+    };
+  }
+
   createProduct(body: CreateProductDto, userId: string) {
     return this.productsRepository.create({
       ...body,
       vendor: { connect: { id: userId } },
-      status: ProductStatus.DRAFT,
+      status: DEFAULT_PRODUCT_STATUS,
     });
   }
 
