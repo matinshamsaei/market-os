@@ -4,9 +4,9 @@ import { UserRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../../users/users.service';
 
-import { AuthService } from './auth.service';
+import { AuthService } from '../auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;
