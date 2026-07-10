@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { PrismaModule } from './database/prisma/prisma.module';
 
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -12,6 +13,7 @@ import { AppService } from './app.service';
 
 @Module({
   imports: [
+    InventoryModule,
     CatalogModule,
     UsersModule,
     AuthModule,
