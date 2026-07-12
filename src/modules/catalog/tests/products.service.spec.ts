@@ -4,6 +4,7 @@ import { ProductStatus, UserRole } from '@prisma/client';
 
 import type { TokenPayload } from '@/shared/types';
 
+import { InventoryService } from '../../inventory/inventory.service';
 import { ProductsService } from '../products.service';
 import { ProductsRepository } from '../products.repository';
 
@@ -16,6 +17,10 @@ describe('ProductsService', () => {
     create: jest.fn(),
     update: jest.fn(),
     findById: jest.fn(),
+  };
+
+  const mockInventoryService = {
+    createProductInventory: jest.fn(),
   };
 
   const vendorUser: TokenPayload = {
@@ -52,6 +57,10 @@ describe('ProductsService', () => {
         {
           provide: ProductsRepository,
           useValue: mockProductsRepository,
+        },
+        {
+          provide: InventoryService,
+          useValue: mockInventoryService,
         },
       ],
     }).compile();
@@ -139,6 +148,13 @@ describe('ProductsService', () => {
         ...baseProduct,
         ...body,
       });
+      mockInventoryService.createProductInventory.mockResolvedValue({
+        id: 'inventory-1',
+        productId: baseProduct.id,
+        quantity: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const response = await service.createProduct(body, vendorUser.userId);
 
@@ -146,6 +162,10 @@ describe('ProductsService', () => {
         ...body,
         vendor: { connect: { id: vendorUser.userId } },
         status: ProductStatus.DRAFT,
+      });
+      expect(mockInventoryService.createProductInventory).toHaveBeenCalledWith({
+        productId: baseProduct.id,
+        quantity: 0,
       });
       expect(response.title).toBe('New Product');
     });

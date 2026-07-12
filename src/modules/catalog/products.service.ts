@@ -10,6 +10,8 @@ import { PaginatedResult } from '@/shared/pagination';
 import type { TokenPayload } from '@/shared/types';
 import { isObjectEmpty } from '@/shared/utils';
 
+import { InventoryService } from '../inventory/inventory.service';
+
 import {
   CreateProductDto,
   GetProductByIdResponseDto,
@@ -22,7 +24,10 @@ import { ProductsRepository } from './products.repository';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly productsRepository: ProductsRepository) {}
+  constructor(
+    private readonly productsRepository: ProductsRepository,
+    private readonly inventoryService: InventoryService,
+  ) {}
 
   getPublishedProducts(query: GetProductsQueryParamsDto): Promise<PaginatedResult<Product>> {
     return this.productsRepository.findAllPublishedProducts(query);
@@ -54,12 +59,19 @@ export class ProductsService {
     };
   }
 
-  createProduct(body: CreateProductDto, userId: string) {
-    return this.productsRepository.create({
+  async createProduct(body: CreateProductDto, userId: string) {
+    const product = await this.productsRepository.create({
       ...body,
       vendor: { connect: { id: userId } },
       status: DEFAULT_PRODUCT_STATUS,
     });
+
+    await this.inventoryService.createProductInventory({
+      productId: product.id,
+      quantity: 0,
+    });
+
+    return product;
   }
 
   async updateProduct(id: string, body: UpdateProductDto, user: TokenPayload): Promise<Product> {

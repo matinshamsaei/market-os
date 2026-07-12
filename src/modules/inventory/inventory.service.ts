@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 import type { TokenPayload } from '@/shared/types';
 
 import { InventoryRepository } from './inventory.repository';
-import type { UpdateInventoryDto } from './dto';
+import type { CreateInventoryDto, UpdateInventoryDto } from './dto';
 import { UserRole } from '@prisma/client';
 
 @Injectable()
@@ -19,6 +19,13 @@ export class InventoryService {
     return inventory;
   }
 
+  createProductInventory(body: CreateInventoryDto) {
+    return this.inventoryRepository.create({
+      product: { connect: { id: body.productId } },
+      quantity: body.quantity,
+    });
+  }
+
   async updateProductInventory(productId: string, body: UpdateInventoryDto, user: TokenPayload) {
     const inventory = await this.inventoryRepository.findByProductIdIncludeVendorId(productId);
 
@@ -27,7 +34,7 @@ export class InventoryService {
     }
 
     if (user.role !== UserRole.ADMIN && inventory.product?.vendorId !== user.userId) {
-      throw new NotFoundException('Inventory not found');
+      throw new ForbiddenException('You are not authorized to update this inventory');
     }
 
     return this.inventoryRepository.update(productId, body);

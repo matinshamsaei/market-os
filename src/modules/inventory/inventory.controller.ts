@@ -9,7 +9,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 import { InventoryService } from './inventory.service';
-import type { UpdateInventoryDto } from './dto';
+import { UpdateInventoryDto } from './dto';
 
 @Controller()
 export class InventoryController {

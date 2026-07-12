@@ -30,6 +30,12 @@ export class InventoryRepository {
     });
   }
 
+  create(data: Prisma.InventoryCreateInput) {
+    return this.prisma.inventory.create({
+      data,
+    });
+  }
+
   update(productId: string, data: Prisma.InventoryUpdateInput) {
     return this.prisma.inventory.update({
       where: {

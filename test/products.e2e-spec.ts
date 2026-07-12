@@ -30,12 +30,14 @@ describe('Products (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.inventory.deleteMany();
     await prisma.product.deleteMany();
     await prisma.user.deleteMany();
     await app.close();
   });
 
   beforeEach(async () => {
+    await prisma.inventory.deleteMany();
     await prisma.product.deleteMany();
     await prisma.user.deleteMany();
   });
