@@ -13,4 +13,4 @@ import { ProductsService } from './products.service';
   providers: [ProductsService, ProductsRepository],
   exports: [ProductsService],
 })
-export class CatalogModule {}
+export class ProductsModule {}
