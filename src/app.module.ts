@@ -5,6 +5,7 @@ import { PrismaModule } from './database/prisma/prisma.module';
 
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ProductsModule } from './modules/products/products.module';
+import { CartModule } from './modules/cart/cart.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 
@@ -15,6 +16,7 @@ import { AppService } from './app.service';
   imports: [
     InventoryModule,
     ProductsModule,
+    CartModule,
     UsersModule,
     AuthModule,
 
