@@ -126,6 +126,18 @@ describe('CartService', () => {
       );
     });
 
+    it('creates a new cart item when product is not already in the cart', async () => {
+      mockCartRepository.findPublishedProductWithInventory.mockResolvedValue(publishedProduct);
+      mockCartRepository.findByCustomerId.mockResolvedValue(cartWithItems);
+      mockCartRepository.findCartItemByProductId.mockResolvedValue(null);
+      mockCartRepository.createCartItem.mockResolvedValue(undefined);
+
+      await service.addToCart({ productId: 'product-2', quantity: 1 }, customer);
+
+      expect(mockCartRepository.createCartItem).toHaveBeenCalledWith('cart-1', 'product-2', 1);
+      expect(mockCartRepository.updateCartItemQuantity).not.toHaveBeenCalled();
+    });
+
     it('increases quantity when product already exists in cart', async () => {
       mockCartRepository.findPublishedProductWithInventory.mockResolvedValue(publishedProduct);
       mockCartRepository.findByCustomerId.mockResolvedValue(cartWithItems);
@@ -146,11 +158,32 @@ describe('CartService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('rejects products without inventory', async () => {
+      mockCartRepository.findPublishedProductWithInventory.mockResolvedValue({
+        ...publishedProduct,
+        inventory: null,
+      });
+
+      await expect(
+        service.addToCart({ productId: 'product-1', quantity: 1 }, customer),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('rejects quantities above stock', async () => {
       mockCartRepository.findPublishedProductWithInventory.mockResolvedValue(publishedProduct);
 
       await expect(
         service.addToCart({ productId: 'product-1', quantity: 11 }, customer),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects when merged quantity exceeds stock', async () => {
+      mockCartRepository.findPublishedProductWithInventory.mockResolvedValue(publishedProduct);
+      mockCartRepository.findByCustomerId.mockResolvedValue(cartWithItems);
+      mockCartRepository.findCartItemByProductId.mockResolvedValue(cartWithItems.cartItems[0]);
+
+      await expect(
+        service.addToCart({ productId: 'product-1', quantity: 9 }, customer),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -190,6 +223,19 @@ describe('CartService', () => {
         ForbiddenException,
       );
     });
+
+    it('rejects updating quantity above stock', async () => {
+      mockCartRepository.findCartItemById.mockResolvedValue({
+        ...cartWithItems.cartItems[0],
+        cart: cartWithItems,
+        product: publishedProduct,
+      });
+      mockCartRepository.findPublishedProductWithInventory.mockResolvedValue(publishedProduct);
+
+      await expect(service.updateCartItem('item-1', { quantity: 11 }, customer)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('removeCartItem', () => {
@@ -208,6 +254,22 @@ describe('CartService', () => {
       await service.removeCartItem('item-1', customer);
 
       expect(mockCartRepository.deleteCartItem).toHaveBeenCalledWith('item-1');
+    });
+
+    it('throws when item does not exist', async () => {
+      mockCartRepository.findCartItemById.mockResolvedValue(null);
+
+      await expect(service.removeCartItem('missing', customer)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws when item belongs to another customer', async () => {
+      mockCartRepository.findCartItemById.mockResolvedValue({
+        ...cartWithItems.cartItems[0],
+        cart: { ...cartWithItems, customerId: 'other-customer' },
+        product: publishedProduct,
+      });
+
+      await expect(service.removeCartItem('item-1', customer)).rejects.toThrow(ForbiddenException);
     });
   });
 });
