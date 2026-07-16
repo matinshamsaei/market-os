@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { ProductStatus } from '@prisma/client';
+import { Prisma, ProductStatus } from '@prisma/client';
 
 import { PrismaService } from '@/database/prisma/prisma.service';
 
@@ -103,6 +103,18 @@ export class CartRepository {
   deleteCartItem(itemId: string) {
     return this.prisma.cartItem.delete({
       where: { id: itemId },
+    });
+  }
+
+  clearCart(customerId: string, transaction?: Prisma.TransactionClient) {
+    const repository = transaction ?? this.prisma;
+    return repository.cart.update({
+      where: { customerId },
+      data: {
+        cartItems: {
+          deleteMany: {},
+        },
+      },
     });
   }
 }

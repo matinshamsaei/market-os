@@ -10,6 +10,7 @@ import type { TokenPayload } from '@/shared/types';
 import { AddToCartDto, GetCartResponse, UpdateCartItemDto } from './dto';
 import type { AvailableProduct, CustomerCart } from './types';
 import { CartRepository } from './cart.repository';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CartService {
@@ -77,6 +78,14 @@ export class CartService {
 
     await this.cartRepository.deleteCartItem(itemId);
 
+    return this.getCart(user);
+  }
+
+  async clearCart(
+    user: TokenPayload,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<GetCartResponse> {
+    await this.cartRepository.clearCart(user.userId, transaction);
     return this.getCart(user);
   }
 
