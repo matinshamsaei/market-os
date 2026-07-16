@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/database/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
@@ -13,6 +13,24 @@ export class InventoryRepository {
         productId,
       },
     });
+  }
+
+  async decrementIfEnough(tx: Prisma.TransactionClient, productId: string, quantity: number) {
+    const result = await tx.inventory.update({
+      where: {
+        productId,
+        quantity: { gte: quantity },
+      },
+      data: {
+        quantity: { decrement: quantity },
+      },
+    });
+
+    if (!result) {
+      throw new BadRequestException(`Insufficient stock for product ${productId}`);
+    }
+
+    return result;
   }
 
   findByProductIdIncludeVendorId(productId: string) {

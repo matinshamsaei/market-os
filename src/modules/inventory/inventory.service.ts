@@ -4,7 +4,7 @@ import type { TokenPayload } from '@/shared/types';
 
 import { InventoryRepository } from './inventory.repository';
 import type { CreateInventoryDto, UpdateInventoryDto } from './dto';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 
 @Injectable()
 export class InventoryService {
@@ -17,6 +17,14 @@ export class InventoryService {
       throw new NotFoundException('Inventory not found');
     }
     return inventory;
+  }
+
+  async decrementProductStock(
+    transaction: Prisma.TransactionClient,
+    productId: string,
+    quantity: number,
+  ) {
+    return this.inventoryRepository.decrementIfEnough(transaction, productId, quantity);
   }
 
   createProductInventory(body: CreateInventoryDto) {
