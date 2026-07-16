@@ -25,6 +25,7 @@ model User {
 
   products Product[]
   carts    Cart[]
+  orders   Order[]
 
   @@map("users")
 }
@@ -51,6 +52,8 @@ model Product {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   cartItems CartItem[]
+
+  orderItems OrderItem[]
 
   @@index([vendorId])
   @@map("products")
@@ -100,4 +103,47 @@ model CartItem {
   updatedAt DateTime @updatedAt
 
   @@map("cart_items")
+}
+
+// Orders
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id           String   @id @default(uuid())
+ 
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+
+  status       OrderStatus @default(PENDING)
+
+  total        Float
+  subTotal     Float
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  orderId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  productTitleSnapshot String
+  productPriceSnapshot Float
+
+  quantity Int
 }
