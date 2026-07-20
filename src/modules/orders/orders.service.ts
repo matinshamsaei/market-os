@@ -25,7 +25,14 @@ export class OrdersService {
     private readonly stateMachine: OrderStateMachine,
   ) {}
 
-  async checkout(user: TokenPayload): Promise<Order> {
+  async checkout(user: TokenPayload, idempotencyKey?: string): Promise<Order> {
+    if (idempotencyKey) {
+      const cached = this.idempotencyStore.get(idempotencyKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const cart = await this.cartService.getCart(user);
 
     if (!cart?.items?.length) {
@@ -58,8 +65,34 @@ export class OrdersService {
 
       await this.cartService.clearCart(user, tx);
 
+      if (idempotencyKey) {
+        this.idempotencyStore.set(idempotencyKey, order);
+      }
+
       return order;
     });
+  }
+
+  async getOrders(user: TokenPayload): Promise<Order[]> {
+    if (user.role === UserRole.ADMIN) {
+      return this.ordersRepository.findMany();
+    }
+
+    return this.ordersRepository.findMany(user.userId);
+  }
+
+  async getOrderById(orderId: string, user: TokenPayload): Promise<Order> {
+    const order = await this.ordersRepository.findByIdWithItems(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (user.role !== UserRole.ADMIN && user.userId !== order.userId) {
+      throw new ForbiddenException('You are not allowed to view this order');
+    }
+
+    return order;
   }
 
   async updateStatus(orderId: string, status: OrderStatus, user: TokenPayload): Promise<Order> {
@@ -79,6 +112,42 @@ export class OrdersService {
       this.ordersRepository.updateStatus(tx, orderId, status),
     );
   }
+
+  async cancelOrder(orderId: string, user: TokenPayload): Promise<Order> {
+    const order = await this.ordersRepository.findByIdWithItems(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (user.role === UserRole.CUSTOMER && user.userId !== order.userId) {
+      throw new ForbiddenException('You are not allowed to update this order');
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('Only pending orders can be cancelled');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await Promise.all(
+        order.orderItems.map((item) =>
+          this.inventoryService.restoreProductStock(tx, item.productId, item.quantity),
+        ),
+      );
+
+      return this.ordersRepository.updateStatus(tx, orderId, OrderStatus.CANCELLED);
+    });
+  }
+
+  async getVendorOrders(user: TokenPayload): Promise<Order[]> {
+    if (user.role === UserRole.VENDOR) {
+      return this.ordersRepository.findManyForVendor(user.userId);
+    }
+
+    throw new ForbiddenException('Only vendors can view vendor orders');
+  }
+
+  private readonly idempotencyStore = new Map<string, Order>();
 
   private assertCanUpdateOrder(order: Order, nextStatus: OrderStatus, user: TokenPayload): void {
     if (user.role === UserRole.CUSTOMER) {

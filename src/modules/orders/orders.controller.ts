@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Patch, Post, UseGuards } from '@nestjs/common';
 
 import { Order, UserRole } from '@prisma/client';
 
@@ -16,11 +16,35 @@ import { OrdersService } from './orders.service';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  getOrders(@CurrentUser() user: TokenPayload): Promise<Order[]> {
+    return this.ordersService.getOrders(user);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  getOrderById(@Param('id') id: string, @CurrentUser() user: TokenPayload): Promise<Order> {
+    return this.ordersService.getOrderById(id, user);
+  }
+
+  @Get('vendor/orders')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.VENDOR, UserRole.ADMIN)
+  getVendorOrders(@CurrentUser() user: TokenPayload): Promise<Order[]> {
+    return this.ordersService.getVendorOrders(user);
+  }
+
   @Post('checkout')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CUSTOMER)
-  checkout(@CurrentUser() user: TokenPayload): Promise<Order> {
-    return this.ordersService.checkout(user);
+  checkout(
+    @CurrentUser() user: TokenPayload,
+    @Headers('Idempotency-Key') idempotencyKey?: string,
+  ): Promise<Order> {
+    return this.ordersService.checkout(user, idempotencyKey);
   }
 
   @Patch(':id/status')
@@ -32,5 +56,12 @@ export class OrdersController {
     @CurrentUser() user: TokenPayload,
   ): Promise<Order> {
     return this.ordersService.updateStatus(id, dto.status, user);
+  }
+
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN)
+  cancelOrder(@Param('id') id: string, @CurrentUser() user: TokenPayload): Promise<Order> {
+    return this.ordersService.cancelOrder(id, user);
   }
 }

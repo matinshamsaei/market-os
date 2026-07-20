@@ -18,6 +18,42 @@ export class OrdersRepository {
     return this.prisma.order.findUnique({ where: { id } });
   }
 
+  findByIdWithItems(id: string): Promise<(Order & { orderItems: any[] }) | null> {
+    return this.prisma.order.findUnique({
+      where: { id },
+      include: { orderItems: true },
+    });
+  }
+
+  findMany(userId?: string): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      ...(userId ? { where: { userId } } : {}),
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findManyForVendor(vendorId: string): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      where: {
+        orderItems: {
+          some: {
+            product: {
+              vendorId,
+            },
+          },
+        },
+      },
+      include: {
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   updateStatus(
     transaction: Prisma.TransactionClient,
     id: string,
