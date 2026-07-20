@@ -33,6 +33,15 @@ export class InventoryRepository {
     return result;
   }
 
+  increment(tx: Prisma.TransactionClient, productId: string, quantity: number) {
+    return tx.inventory.update({
+      where: { productId },
+      data: {
+        quantity: { increment: quantity },
+      },
+    });
+  }
+
   findByProductIdIncludeVendorId(productId: string) {
     return this.prisma.inventory.findUnique({
       where: {

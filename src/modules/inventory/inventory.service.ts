@@ -27,6 +27,14 @@ export class InventoryService {
     return this.inventoryRepository.decrementIfEnough(transaction, productId, quantity);
   }
 
+  async restoreProductStock(
+    transaction: Prisma.TransactionClient,
+    productId: string,
+    quantity: number,
+  ) {
+    return this.inventoryRepository.increment(transaction, productId, quantity);
+  }
+
   createProductInventory(body: CreateInventoryDto) {
     return this.inventoryRepository.create({
       product: { connect: { id: body.productId } },
