@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
-import { Order, OrderStatus, Prisma } from '@prisma/client';
+import { Order, OrderStatus, Prisma, UserRole } from '@prisma/client';
 
 import { OrdersRepository } from './orders.repository';
 import { CartService } from '../cart/cart.service';
@@ -8,6 +13,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { TokenPayload } from '@/shared/types';
 import { PrismaService } from '@/database/prisma/prisma.service';
 import { CartItemResponse } from '../cart/dto';
+import { OrderStateMachine } from './order-state-machine';
 
 @Injectable()
 export class OrdersService {
@@ -16,6 +22,7 @@ export class OrdersService {
     private readonly inventoryService: InventoryService,
     private readonly cartService: CartService,
     private readonly prisma: PrismaService,
+    private readonly stateMachine: OrderStateMachine,
   ) {}
 
   async checkout(user: TokenPayload): Promise<Order> {
@@ -53,6 +60,36 @@ export class OrdersService {
 
       return order;
     });
+  }
+
+  async updateStatus(orderId: string, status: OrderStatus, user: TokenPayload): Promise<Order> {
+    const order = await this.ordersRepository.findById(orderId);
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    this.assertCanUpdateOrder(order, status, user);
+
+    if (!this.stateMachine.canTransition(order.status, status)) {
+      throw new BadRequestException(`Cannot change order from ${order.status} to ${status}`);
+    }
+
+    return this.prisma.$transaction((tx) =>
+      this.ordersRepository.updateStatus(tx, orderId, status),
+    );
+  }
+
+  private assertCanUpdateOrder(order: Order, nextStatus: OrderStatus, user: TokenPayload): void {
+    if (user.role === UserRole.CUSTOMER) {
+      if (user.userId !== order.userId) {
+        throw new ForbiddenException('You are not allowed to update this order');
+      }
+
+      if (nextStatus !== OrderStatus.CANCELLED || order.status !== OrderStatus.PENDING) {
+        throw new ForbiddenException('Customers can only cancel their pending orders');
+      }
+    }
   }
 
   private async decrementProductStock(

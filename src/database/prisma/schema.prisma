@@ -108,6 +108,7 @@ model CartItem {
 // Orders
 enum OrderStatus {
   PENDING
+  PAID
   PROCESSING
   SHIPPED
   DELIVERED
