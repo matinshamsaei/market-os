@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/database/prisma/prisma.service';
-import { Order, OrderStatus, Prisma } from '@prisma/client';
+import { Order, OrderItem, OrderStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersRepository {
@@ -18,7 +18,7 @@ export class OrdersRepository {
     return this.prisma.order.findUnique({ where: { id } });
   }
 
-  findByIdWithItems(id: string): Promise<(Order & { orderItems: any[] }) | null> {
+  findByIdWithItems(id: string): Promise<(Order & { orderItems: OrderItem[] }) | null> {
     return this.prisma.order.findUnique({
       where: { id },
       include: { orderItems: true },
