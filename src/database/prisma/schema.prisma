@@ -26,6 +26,7 @@ model User {
   products Product[]
   carts    Cart[]
   orders   Order[]
+  wallet   Wallet?
 
   @@map("users")
 }
@@ -116,18 +117,18 @@ enum OrderStatus {
 }
 
 model Order {
-  id           String   @id @default(uuid())
- 
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  id String @id @default(uuid())
 
-  status       OrderStatus @default(PENDING)
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  total        Float
-  subTotal     Float
+  status OrderStatus @default(PENDING)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  total    Float
+  subTotal Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   orderItems OrderItem[]
 
@@ -137,7 +138,7 @@ model Order {
 model OrderItem {
   id String @id @default(uuid())
 
-  order   Order   @relation(fields: [orderId], references: [id])
+  order   Order  @relation(fields: [orderId], references: [id])
   orderId String
 
   product   Product @relation(fields: [productId], references: [id])
@@ -147,4 +148,42 @@ model OrderItem {
   productPriceSnapshot Float
 
   quantity Int
+}
+
+// Wallet
+enum WalletTransactionType {
+  DEPOSIT
+  PAYMENT
+  REFUND
+  WITHDRAWAL
+}
+
+model Wallet {
+  id      String @id @default(uuid())
+  balance Int    @default(0)
+
+  transactions WalletTransaction[]
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id String @id @default(uuid())
+
+  type   WalletTransactionType
+  amount Int
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@map("wallet_transactions")
 }
