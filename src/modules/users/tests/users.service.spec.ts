@@ -2,6 +2,9 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 
+import { PrismaService } from '@/database/prisma/prisma.service';
+
+import { WalletRepository } from '../../wallet/wallet.repository';
 import { UsersService } from '../users.service';
 import { UsersRepository } from '../users.repository';
 
@@ -13,6 +16,16 @@ describe('UsersService', () => {
     create: jest.fn(),
     findById: jest.fn(),
     stripPasswordFromUser: jest.fn(),
+  };
+
+  const mockWalletRepository = {
+    createForUser: jest.fn(),
+  };
+
+  const mockTransaction = {};
+
+  const mockPrismaService = {
+    $transaction: jest.fn(),
   };
 
   const user = {
@@ -31,6 +44,14 @@ describe('UsersService', () => {
         {
           provide: UsersRepository,
           useValue: mockUsersRepository,
+        },
+        {
+          provide: WalletRepository,
+          useValue: mockWalletRepository,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrismaService,
         },
       ],
     }).compile();
@@ -52,7 +73,7 @@ describe('UsersService', () => {
   });
 
   describe('registerUser', () => {
-    it('should delegate to repository', async () => {
+    it('creates user and wallet inside the same transaction', async () => {
       const payload = {
         email: user.email,
         password: user.password,
@@ -60,10 +81,23 @@ describe('UsersService', () => {
       };
 
       mockUsersRepository.create.mockResolvedValue(user);
+      mockWalletRepository.createForUser.mockResolvedValue({
+        id: 'wallet-1',
+        userId: user.id,
+        balance: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      mockPrismaService.$transaction.mockImplementation(
+        async (callback: (transaction: typeof mockTransaction) => Promise<unknown>) =>
+          callback(mockTransaction),
+      );
 
       const response = await service.registerUser(payload);
 
-      expect(mockUsersRepository.create).toHaveBeenCalledWith(payload);
+      expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockUsersRepository.create).toHaveBeenCalledWith(payload, mockTransaction);
+      expect(mockWalletRepository.createForUser).toHaveBeenCalledWith(user.id, mockTransaction);
       expect(response).toEqual(user);
     });
   });
