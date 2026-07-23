@@ -15,6 +15,7 @@ import {
   type ErrorResponse,
   type ProfileResponse,
 } from './helpers/auth.helper';
+import { cleanupUsers } from './helpers/db.helper';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
@@ -29,12 +30,12 @@ describe('Auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany();
+    await cleanupUsers(prisma);
     await app.close();
   });
 
   beforeEach(async () => {
-    await prisma.user.deleteMany();
+    await cleanupUsers(prisma);
   });
 
   describe('POST /auth/register', () => {
@@ -55,6 +56,15 @@ describe('Auth (e2e)', () => {
       });
       expect(body.user).not.toHaveProperty('password');
       expect(body.user.id).toEqual(expect.any(String));
+
+      const wallet = await prisma.wallet.findUnique({
+        where: { userId: body.user.id },
+      });
+
+      expect(wallet).toMatchObject({
+        userId: body.user.id,
+        balance: 0,
+      });
     });
 
     it('rejects duplicate email registration', async () => {
