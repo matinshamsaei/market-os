@@ -97,4 +97,18 @@ export class WalletRepository {
       },
     });
   }
+
+  refund(
+    walletId: string,
+    amount: number,
+    transaction: Prisma.TransactionClient,
+  ): Promise<WalletTransaction> {
+    return this.recordTransaction(
+      transaction,
+      walletId,
+      WalletTransactionType.REFUND,
+      amount,
+      amount,
+    );
+  }
 }

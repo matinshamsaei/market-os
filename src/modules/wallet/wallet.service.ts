@@ -72,4 +72,22 @@ export class WalletService {
       throw error;
     }
   }
+
+  async refund(
+    userId: string,
+    amount: number,
+    transaction: Prisma.TransactionClient,
+  ): Promise<WalletTransaction> {
+    if (amount <= 0) {
+      throw new BadRequestException('Refund amount must be positive');
+    }
+
+    const wallet = await this.walletRepository.findByUserId(userId, transaction);
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    return this.walletRepository.refund(wallet.id, amount, transaction);
+  }
 }
