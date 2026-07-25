@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 
 import { Prisma, Wallet, WalletTransaction, WalletTransactionType } from '@prisma/client';
 
+import { paginate, type PaginatedResult } from '@/shared/pagination';
 import { PrismaService } from '@/database/prisma/prisma.service';
+
+import { GetWalletTransactionsQueryDto } from './dto';
 
 @Injectable()
 export class WalletRepository {
@@ -15,16 +18,26 @@ export class WalletRepository {
     });
   }
 
-  findByUserIdWithTransactions(
-    userId: string,
-  ): Promise<(Wallet & { transactions: WalletTransaction[] }) | null> {
-    return this.prisma.wallet.findUnique({
-      where: { userId },
-      include: {
-        transactions: {
-          orderBy: { createdAt: 'desc' },
+  findTransactions(
+    walletId: string,
+    query: GetWalletTransactionsQueryDto,
+  ): Promise<PaginatedResult<WalletTransaction>> {
+    const where: Prisma.WalletTransactionWhereInput = {
+      walletId,
+      ...(query.type ? { type: query.type } : {}),
+      ...((query.from || query.to) && {
+        createdAt: {
+          ...(query.from ? { gte: new Date(query.from) } : {}),
+          ...(query.to ? { lte: new Date(query.to) } : {}),
         },
-      },
+      }),
+    };
+
+    return paginate(this.prisma.walletTransaction, {
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      page: query.page,
+      perPage: query.perPage,
     });
   }
 

@@ -3,10 +3,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma, Wallet, WalletTransaction } from '@prisma/client';
 
 import { PrismaService } from '@/database/prisma/prisma.service';
+import type { PaginatedResult } from '@/shared/pagination';
 import type { TokenPayload } from '@/shared/types';
 
+import { DepositDto, GetWalletTransactionsQueryDto } from './dto';
 import { WalletRepository } from './wallet.repository';
-import { DepositDto } from './dto';
 
 @Injectable()
 export class WalletService {
@@ -25,14 +26,21 @@ export class WalletService {
     return wallet;
   }
 
-  async getTransactions(user: TokenPayload): Promise<WalletTransaction[]> {
-    const wallet = await this.walletRepository.findByUserIdWithTransactions(user.userId);
+  async getTransactions(
+    user: TokenPayload,
+    query: GetWalletTransactionsQueryDto,
+  ): Promise<PaginatedResult<WalletTransaction>> {
+    if (query.from && query.to && new Date(query.from) > new Date(query.to)) {
+      throw new BadRequestException('"from" must be before or equal to "to"');
+    }
+
+    const wallet = await this.walletRepository.findByUserId(user.userId);
 
     if (!wallet) {
       throw new NotFoundException('Wallet not found');
     }
 
-    return wallet.transactions;
+    return this.walletRepository.findTransactions(wallet.id, query);
   }
 
   async deposit(user: TokenPayload, body: DepositDto): Promise<WalletTransaction> {
