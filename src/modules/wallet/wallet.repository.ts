@@ -52,4 +52,20 @@ export class WalletRepository {
 
     return walletTransaction;
   }
+
+  deposit(
+    walletId: string,
+    amount: number,
+    transaction?: Prisma.TransactionClient,
+  ): Promise<WalletTransaction> {
+    const repository = transaction ?? this.prisma;
+
+    return this.recordTransaction(
+      repository,
+      walletId,
+      WalletTransactionType.DEPOSIT,
+      amount,
+      amount,
+    );
+  }
 }

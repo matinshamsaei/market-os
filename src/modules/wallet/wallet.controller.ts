@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 
 import { UserRole } from '@prisma/client';
 
@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { WalletService } from './wallet.service';
+import { DepositDto } from './dto';
 
 @Controller('wallet')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,5 +26,10 @@ export class WalletController {
   @Get('transactions')
   getTransactions(@CurrentUser() user: TokenPayload) {
     return this.walletService.getTransactions(user);
+  }
+
+  @Post('deposit')
+  deposit(@CurrentUser() user: TokenPayload, @Body() body: DepositDto) {
+    return this.walletService.deposit(user, body);
   }
 }
