@@ -64,4 +64,11 @@ export class OrdersController {
   cancelOrder(@Param('id') id: string, @CurrentUser() user: TokenPayload): Promise<Order> {
     return this.ordersService.cancelOrder(id, user);
   }
+
+  @Post(':id/refund')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  refundOrder(@Param('id') id: string, @CurrentUser() user: TokenPayload): Promise<Order> {
+    return this.ordersService.refundOrder(id, user);
+  }
 }

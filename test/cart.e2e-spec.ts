@@ -13,6 +13,7 @@ import {
   type AuthResponse,
   type ErrorResponse,
 } from './helpers/auth.helper';
+import { cleanupMarketplace } from './helpers/db.helper';
 import {
   addToCart,
   getCart,
@@ -32,20 +33,12 @@ describe('Cart (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.cartItem.deleteMany();
-    await prisma.cart.deleteMany();
-    await prisma.inventory.deleteMany();
-    await prisma.product.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanupMarketplace(prisma);
     await app.close();
   });
 
   beforeEach(async () => {
-    await prisma.cartItem.deleteMany();
-    await prisma.cart.deleteMany();
-    await prisma.inventory.deleteMany();
-    await prisma.product.deleteMany();
-    await prisma.user.deleteMany();
+    await cleanupMarketplace(prisma);
   });
 
   async function seedPublishedProduct(stock: number, price = 100) {
