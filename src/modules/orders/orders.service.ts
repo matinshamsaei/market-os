@@ -10,6 +10,7 @@ import { PrismaService } from '@/database/prisma/prisma.service';
 import type { TokenPayload } from '@/shared/types';
 
 import { InventoryService } from '../inventory/inventory.service';
+import { WalletService } from '../wallet/wallet.service';
 import { CartService } from '../cart/cart.service';
 import { CartItemResponse } from '../cart/dto';
 
@@ -22,6 +23,7 @@ export class OrdersService {
     private readonly ordersRepository: OrdersRepository,
     private readonly inventoryService: InventoryService,
     private readonly cartService: CartService,
+    private readonly walletService: WalletService,
     private readonly prisma: PrismaService,
     private readonly stateMachine: OrderStateMachine,
   ) {}
@@ -47,11 +49,15 @@ export class OrdersService {
         (acc, item) => acc + item.price * item.quantity,
         0,
       );
+      const paymentAmount = Math.round(pureProductsTotalPrice);
+
+      await this.walletService.pay(user.userId, paymentAmount, tx);
+
       const order = await this.ordersRepository.createOrder(tx, {
         user: { connect: { id: user.userId } },
         subTotal: pureProductsTotalPrice,
         total: pureProductsTotalPrice, // TODO: add shipping price and other fees
-        status: OrderStatus.PENDING,
+        status: OrderStatus.PAID,
         orderItems: {
           create: cart.items.map((item) => {
             return {

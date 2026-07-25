@@ -8,8 +8,9 @@ import { PrismaService } from '@/database/prisma/prisma.service';
 export class WalletRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findByUserId(userId: string): Promise<Wallet | null> {
-    return this.prisma.wallet.findUnique({
+  findByUserId(userId: string, transaction?: Prisma.TransactionClient): Promise<Wallet | null> {
+    const repository = transaction ?? this.prisma;
+    return repository.wallet.findUnique({
       where: { userId },
     });
   }
@@ -67,5 +68,33 @@ export class WalletRepository {
       amount,
       amount,
     );
+  }
+
+  async pay(
+    walletId: string,
+    amount: number,
+    transaction: Prisma.TransactionClient,
+  ): Promise<WalletTransaction> {
+    const updated = await transaction.wallet.updateMany({
+      where: {
+        id: walletId,
+        balance: { gte: amount },
+      },
+      data: {
+        balance: { decrement: amount },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new Error('INSUFFICIENT_WALLET_BALANCE');
+    }
+
+    return transaction.walletTransaction.create({
+      data: {
+        walletId,
+        type: WalletTransactionType.PAYMENT,
+        amount,
+      },
+    });
   }
 }
