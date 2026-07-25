@@ -6,14 +6,15 @@ import {
 } from '@nestjs/common';
 
 import { Order, OrderStatus, Prisma, UserRole } from '@prisma/client';
+import { PrismaService } from '@/database/prisma/prisma.service';
+import type { TokenPayload } from '@/shared/types';
+
+import { InventoryService } from '../inventory/inventory.service';
+import { CartService } from '../cart/cart.service';
+import { CartItemResponse } from '../cart/dto';
 
 import { OrdersRepository } from './orders.repository';
-import { CartService } from '../cart/cart.service';
-import { InventoryService } from '../inventory/inventory.service';
-import { TokenPayload } from '@/shared/types';
-import { PrismaService } from '@/database/prisma/prisma.service';
-import { CartItemResponse } from '../cart/dto';
-import { OrderStateMachine } from './order-state-machine';
+import { OrderStateMachine } from './helpers';
 
 @Injectable()
 export class OrdersService {

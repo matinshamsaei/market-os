@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
 
 @Injectable()
-export class OrderStateMachine {
+class OrderStateMachine {
   private readonly allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
     [OrderStatus.PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED],
     [OrderStatus.PAID]: [OrderStatus.PROCESSING],
@@ -17,3 +17,5 @@ export class OrderStateMachine {
     return this.allowedTransitions[from]?.includes(to) ?? false;
   }
 }
+
+export default OrderStateMachine;
