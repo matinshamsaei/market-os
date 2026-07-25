@@ -184,6 +184,6 @@ model WalletTransaction {
 
   createdAt DateTime @default(now())
 
-  @@index([walletId])
+  @@index([walletId, createdAt])
   @@map("wallet_transactions")
 }
