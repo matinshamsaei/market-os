@@ -19,7 +19,7 @@ import {
   type PaginatedProductsResponse,
   type ProductResponse,
 } from './helpers/products.helper';
-import { cleanupUsers } from './helpers/db.helper';
+import { cleanupMarketplace } from './helpers/db.helper';
 
 describe('Products (e2e)', () => {
   let app: INestApplication<App>;
@@ -31,16 +31,12 @@ describe('Products (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.inventory.deleteMany();
-    await prisma.product.deleteMany();
-    await cleanupUsers(prisma);
+    await cleanupMarketplace(prisma);
     await app.close();
   });
 
   beforeEach(async () => {
-    await prisma.inventory.deleteMany();
-    await prisma.product.deleteMany();
-    await cleanupUsers(prisma);
+    await cleanupMarketplace(prisma);
   });
 
   describe('POST /products', () => {
