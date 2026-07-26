@@ -14,8 +14,8 @@ import { WalletService } from '../wallet/wallet.service';
 import { CartService } from '../cart/cart.service';
 import { CartItemResponse } from '../cart/dto';
 
+import { CUSTOMER_ORDER_CANCELLABLE_STATUSES, REFUNDABLE_STATUSES } from './constants';
 import { OrdersRepository } from './orders.repository';
-import { REFUNDABLE_STATUSES } from './constants';
 import { OrderStateMachine } from './helpers';
 
 @Injectable()
@@ -40,7 +40,7 @@ export class OrdersService {
     const cart = await this.cartService.getCart(user);
 
     if (!cart?.items?.length) {
-      throw new NotFoundException('The user does not have a cart');
+      throw new BadRequestException('Cart is empty');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -50,9 +50,8 @@ export class OrdersService {
         (acc, item) => acc + item.price * item.quantity,
         0,
       );
-      const paymentAmount = Math.round(pureProductsTotalPrice);
 
-      await this.walletService.pay(user.userId, paymentAmount, tx);
+      await this.walletService.pay(user.userId, pureProductsTotalPrice, tx);
 
       const order = await this.ordersRepository.createOrder(tx, {
         user: { connect: { id: user.userId } },
@@ -116,6 +115,10 @@ export class OrdersService {
       throw new BadRequestException(`Cannot change order from ${order.status} to ${status}`);
     }
 
+    if (status === OrderStatus.CANCELLED) {
+      return this.cancelOrder(orderId, user);
+    }
+
     return this.prisma.$transaction((tx) =>
       this.ordersRepository.updateStatus(tx, orderId, status),
     );
@@ -132,11 +135,25 @@ export class OrdersService {
       throw new ForbiddenException('You are not allowed to update this order');
     }
 
-    if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException('Only pending orders can be cancelled');
+    if (user.role === UserRole.CUSTOMER && !this.isCustomerOrderCancellable(order.status)) {
+      throw new BadRequestException("Customers can't cancel order with this status");
     }
 
+    if (user.role === UserRole.ADMIN && order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException('Order is already cancelled');
+    }
+
+    if (!this.stateMachine.canTransition(order.status, OrderStatus.CANCELLED)) {
+      throw new BadRequestException(`Cannot change order from ${order.status} to CANCELLED`);
+    }
+
+    const shouldRefundWallet = this.isRefundableStatus(order.status);
+
     return this.prisma.$transaction(async (tx) => {
+      if (shouldRefundWallet) {
+        await this.walletService.refund(order.userId, order.total, tx);
+      }
+
       await Promise.all(
         order.orderItems.map((item) =>
           this.inventoryService.restoreProductStock(tx, item.productId, item.quantity),
@@ -166,10 +183,8 @@ export class OrdersService {
       throw new BadRequestException(`Cannot change order from ${order.status} to CANCELLED`);
     }
 
-    const refundAmount = Math.round(order.total);
-
     return this.prisma.$transaction(async (tx) => {
-      await this.walletService.refund(order.userId, refundAmount, tx);
+      await this.walletService.refund(order.userId, order.total, tx);
 
       await Promise.all(
         order.orderItems.map((item) =>
@@ -186,7 +201,11 @@ export class OrdersService {
       return this.ordersRepository.findManyForVendor(user.userId);
     }
 
-    throw new ForbiddenException('Only vendors can view vendor orders');
+    if (user.role === UserRole.ADMIN) {
+      return this.ordersRepository.findMany();
+    }
+
+    throw new ForbiddenException('Only vendors and admins can view vendor orders');
   }
 
   private readonly idempotencyStore = new Map<string, Order>();
@@ -195,14 +214,20 @@ export class OrdersService {
     return REFUNDABLE_STATUSES.includes(status);
   }
 
+  private isCustomerOrderCancellable(status: OrderStatus): boolean {
+    return CUSTOMER_ORDER_CANCELLABLE_STATUSES.includes(status);
+  }
+
   private assertCanUpdateOrder(order: Order, nextStatus: OrderStatus, user: TokenPayload): void {
     if (user.role === UserRole.CUSTOMER) {
       if (user.userId !== order.userId) {
         throw new ForbiddenException('You are not allowed to update this order');
       }
 
-      if (nextStatus !== OrderStatus.CANCELLED || order.status !== OrderStatus.PENDING) {
-        throw new ForbiddenException('Customers can only cancel their pending orders');
+      if (nextStatus !== OrderStatus.CANCELLED || !this.isCustomerOrderCancellable(order.status)) {
+        throw new ForbiddenException(
+          'Customers can only cancel their PENDING, PAID, or PROCESSING orders',
+        );
       }
     }
   }

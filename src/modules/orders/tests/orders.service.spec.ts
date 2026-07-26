@@ -149,7 +149,8 @@ describe('OrdersService', () => {
     it('throws when the cart is empty', async () => {
       mockCartService.getCart.mockResolvedValue({ items: [], subtotal: 0, totalItems: 0 });
 
-      await expect(service.checkout(customer)).rejects.toThrow(NotFoundException);
+      await expect(service.checkout(customer)).rejects.toThrow(BadRequestException);
+      await expect(service.checkout(customer)).rejects.toThrow('Cart is empty');
       expect(mockPrismaService.$transaction).not.toHaveBeenCalled();
     });
 
@@ -193,6 +194,46 @@ describe('OrdersService', () => {
 
     it('rejects non-admin users', async () => {
       await expect(service.refundOrder(paidOrder.id, customer)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows a customer to cancel a PAID order with wallet refund', async () => {
+      mockOrdersRepository.findByIdWithItems.mockResolvedValue(paidOrder);
+      mockStateMachine.canTransition.mockReturnValue(true);
+      mockWalletService.refund.mockResolvedValue({ id: 'refund-1' });
+      mockInventoryService.restoreProductStock.mockResolvedValue(undefined);
+      mockOrdersRepository.updateStatus.mockResolvedValue({
+        ...paidOrder,
+        status: OrderStatus.CANCELLED,
+      });
+
+      const order = await service.cancelOrder(paidOrder.id, customer);
+
+      expect(mockWalletService.refund).toHaveBeenCalledWith(customer.userId, 200, mockTransaction);
+      expect(mockInventoryService.restoreProductStock).toHaveBeenCalledWith(
+        mockTransaction,
+        'product-1',
+        2,
+      );
+      expect(order.status).toBe(OrderStatus.CANCELLED);
+    });
+
+    it('rejects customer cancel after the order has shipped', async () => {
+      mockOrdersRepository.findByIdWithItems.mockResolvedValue({
+        ...paidOrder,
+        status: OrderStatus.SHIPPED,
+      });
+
+      await expect(service.cancelOrder(paidOrder.id, customer)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockWalletService.refund).not.toHaveBeenCalled();
+    });
+
+    it('lets admins list all vendor orders', async () => {
+      mockOrdersRepository.findMany.mockResolvedValue([paidOrder]);
+
+      await expect(service.getVendorOrders(admin)).resolves.toEqual([paidOrder]);
+      expect(mockOrdersRepository.findMany).toHaveBeenCalled();
     });
 
     it('rejects non-refundable statuses', async () => {
