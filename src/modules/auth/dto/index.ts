@@ -1,14 +1,6 @@
-import type { User, UserRole } from '@prisma/client';
+import type { User } from '@prisma/client';
 
-export type RegisterUserDto = {
-  email: string;
-  password: string;
-  role?: UserRole;
-};
-
-export type LoginUserDto = {
-  email: string;
-  password: string;
-};
+export { LoginUserDto } from './login-user.dto';
+export { PUBLIC_REGISTER_ROLES, RegisterUserDto } from './register-user.dto';
 
 export type AuthenticatedUserResponse = Promise<{ user: Omit<User, 'password'>; token: string }>;
