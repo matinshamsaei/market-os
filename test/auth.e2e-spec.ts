@@ -1,20 +1,13 @@
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
+import { Test } from '@nestjs/testing';
 import { App } from 'supertest/types';
 
-import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/database/prisma/prisma.service';
+import { AppModule } from '../src/app.module';
 
-import {
-  authHeader,
-  httpRequest,
-  registerUser,
-  uniqueEmail,
-  type AuthResponse,
-  type ErrorResponse,
-  type ProfileResponse,
-} from './helpers/auth.helper';
+import { authHeader, httpRequest, registerUser, uniqueEmail } from './helpers/auth.helper';
+import type { AuthResponse, ErrorResponse, ProfileResponse } from './helpers/auth.helper';
 import { cleanupUsers } from './helpers/db.helper';
 
 describe('Auth (e2e)', () => {
@@ -49,13 +42,13 @@ describe('Auth (e2e)', () => {
 
       const body = response.body as AuthResponse;
 
-      expect(body.token).toEqual(expect.any(String));
+      expect(typeof body.token).toBe('string');
       expect(body.user).toMatchObject({
         email,
         role: UserRole.CUSTOMER,
       });
       expect(body.user).not.toHaveProperty('password');
-      expect(body.user.id).toEqual(expect.any(String));
+      expect(typeof body.user.id).toBe('string');
 
       const wallet = await prisma.wallet.findUnique({
         where: { userId: body.user.id },
@@ -98,7 +91,7 @@ describe('Auth (e2e)', () => {
 
       const body = response.body as AuthResponse;
 
-      expect(body.token).toEqual(expect.any(String));
+      expect(typeof body.token).toBe('string');
       expect(body.user).toMatchObject({ email, role: UserRole.CUSTOMER });
       expect(body.user).not.toHaveProperty('password');
     });

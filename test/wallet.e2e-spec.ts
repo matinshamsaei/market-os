@@ -4,16 +4,11 @@ import type { App } from 'supertest/types';
 
 import { PrismaService } from '../src/database/prisma/prisma.service';
 
-import { createTestApp } from './helpers/app.helper';
-import {
-  authHeader,
-  httpRequest,
-  registerUser,
-  uniqueEmail,
-  type ErrorResponse,
-} from './helpers/auth.helper';
-import { cleanupMarketplace } from './helpers/db.helper';
 import { depositToWallet, getWallet, getWalletTransactions } from './helpers/wallet.helper';
+import { authHeader, httpRequest, registerUser, uniqueEmail } from './helpers/auth.helper';
+import type { ErrorResponse } from './helpers/auth.helper';
+import { cleanupMarketplace } from './helpers/db.helper';
+import { createTestApp } from './helpers/app.helper';
 
 describe('Wallet (e2e)', () => {
   let app: INestApplication<App>;
