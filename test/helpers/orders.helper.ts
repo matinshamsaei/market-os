@@ -35,3 +35,16 @@ export async function refundOrder(
 
   return response.body as OrderResponse;
 }
+
+export async function cancelOrder(
+  app: INestApplication,
+  token: string,
+  orderId: string,
+): Promise<OrderResponse> {
+  const response = await httpRequest(app)
+    .patch(`/orders/${orderId}/cancel`)
+    .set(authHeader(token))
+    .expect(200);
+
+  return response.body as OrderResponse;
+}

@@ -4,24 +4,18 @@ import type { App } from 'supertest/types';
 
 import { PrismaService } from '../src/database/prisma/prisma.service';
 
+import { authHeader, httpRequest, registerUser, uniqueEmail } from './helpers/auth.helper';
+import { createProduct, publishProduct } from './helpers/products.helper';
+import type { AuthResponse, ErrorResponse } from './helpers/auth.helper';
+import { cleanupMarketplace } from './helpers/db.helper';
 import { createTestApp } from './helpers/app.helper';
 import {
-  authHeader,
-  httpRequest,
-  registerUser,
-  uniqueEmail,
-  type AuthResponse,
-  type ErrorResponse,
-} from './helpers/auth.helper';
-import { cleanupMarketplace } from './helpers/db.helper';
-import {
+  setProductInventory,
+  removeCartItem,
+  updateCartItem,
   addToCart,
   getCart,
-  removeCartItem,
-  setProductInventory,
-  updateCartItem,
 } from './helpers/cart.helper';
-import { createProduct, publishProduct } from './helpers/products.helper';
 
 describe('Cart (e2e)', () => {
   let app: INestApplication<App>;
@@ -101,7 +95,7 @@ describe('Cart (e2e)', () => {
           },
         ],
       });
-      expect(cart.items[0]?.id).toEqual(expect.any(String));
+      expect(typeof cart.items[0]?.id).toBe('string');
     });
 
     it('increases quantity for a duplicate product instead of creating a second row', async () => {

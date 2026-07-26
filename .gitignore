@@ -401,3 +401,6 @@ dist
 
 /generated/prisma
 documents
+
+**/*.local.*
+*.local.*

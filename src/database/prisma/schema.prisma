@@ -160,7 +160,7 @@ enum WalletTransactionType {
 
 model Wallet {
   id      String @id @default(uuid())
-  balance Int    @default(0)
+  balance Float    @default(0)
 
   transactions WalletTransaction[]
 
@@ -177,7 +177,7 @@ model WalletTransaction {
   id String @id @default(uuid())
 
   type   WalletTransactionType
-  amount Int
+  amount Float
 
   walletId String
   wallet   Wallet @relation(fields: [walletId], references: [id])

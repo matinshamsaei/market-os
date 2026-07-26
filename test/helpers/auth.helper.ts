@@ -1,7 +1,11 @@
 import type { UserRole } from '@prisma/client';
+import { UserRole as Role } from '@prisma/client';
 import type { INestApplication } from '@nestjs/common';
 import type { Server } from 'node:http';
+import * as bcrypt from 'bcrypt';
 import request from 'supertest';
+
+import { PrismaService } from '../../src/database/prisma/prisma.service';
 
 export type AuthResponse = {
   user: {
@@ -34,6 +38,27 @@ export async function registerUser(
   password = 'password123',
   role?: UserRole,
 ): Promise<AuthResponse> {
+  if (role === Role.ADMIN) {
+    const prisma = app.get(PrismaService);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: Role.ADMIN,
+        wallet: { create: { balance: 0 } },
+      },
+    });
+
+    const response = await httpRequest(app)
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(201);
+
+    return response.body as AuthResponse;
+  }
+
   const payload: { email: string; password: string; role?: UserRole } = { email, password };
 
   if (role) {

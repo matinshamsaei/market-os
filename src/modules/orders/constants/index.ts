@@ -6,3 +6,9 @@ export const REFUNDABLE_STATUSES: OrderStatus[] = [
   OrderStatus.SHIPPED,
   OrderStatus.DELIVERED,
 ];
+
+export const CUSTOMER_ORDER_CANCELLABLE_STATUSES: OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.PAID,
+  OrderStatus.PROCESSING,
+];

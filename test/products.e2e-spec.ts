@@ -1,25 +1,15 @@
-import type { INestApplication } from '@nestjs/common';
 import { ProductStatus, UserRole } from '@prisma/client';
+import type { INestApplication } from '@nestjs/common';
 import type { App } from 'supertest/types';
 
 import { PrismaService } from '../src/database/prisma/prisma.service';
 
-import { createTestApp } from './helpers/app.helper';
-import {
-  authHeader,
-  httpRequest,
-  registerUser,
-  uniqueEmail,
-  type ErrorResponse,
-} from './helpers/auth.helper';
-import {
-  createProduct,
-  publishProduct,
-  updateProduct,
-  type PaginatedProductsResponse,
-  type ProductResponse,
-} from './helpers/products.helper';
+import type { PaginatedProductsResponse, ProductResponse } from './helpers/products.helper';
+import { authHeader, httpRequest, registerUser, uniqueEmail } from './helpers/auth.helper';
+import { createProduct, publishProduct, updateProduct } from './helpers/products.helper';
+import type { ErrorResponse } from './helpers/auth.helper';
 import { cleanupMarketplace } from './helpers/db.helper';
+import { createTestApp } from './helpers/app.helper';
 
 describe('Products (e2e)', () => {
   let app: INestApplication<App>;
@@ -67,7 +57,7 @@ describe('Products (e2e)', () => {
         status: ProductStatus.DRAFT,
         vendorId: vendor.user.id,
       });
-      expect(body.id).toEqual(expect.any(String));
+      expect(typeof body.id).toBe('string');
     });
 
     it('rejects unauthenticated create requests', async () => {
@@ -139,7 +129,7 @@ describe('Products (e2e)', () => {
       });
     });
 
-    it('allows an admin to update any product', async () => {
+    it('allows an admin to update a product owned by another vendor', async () => {
       const vendor = await registerUser(
         app,
         uniqueEmail('vendor-admin-update'),
@@ -419,7 +409,7 @@ describe('Products (e2e)', () => {
       expect(body.message).toBe('Product not found!');
     });
 
-    it('returns 404 when another vendor requests a draft product', async () => {
+    it('returns 403 when another vendor requests a draft product', async () => {
       const owner = await registerUser(
         app,
         uniqueEmail('owner-detail'),
@@ -440,11 +430,35 @@ describe('Products (e2e)', () => {
       const response = await httpRequest(app)
         .get(`/products/${product.id}`)
         .set(authHeader(otherVendor.token))
-        .expect(404);
+        .expect(403);
 
       const body = response.body as ErrorResponse;
 
-      expect(body.message).toBe('Product not found!');
+      expect(body.message).toBe('You are not allowed to view this product!');
+    });
+
+    it('lets the owner vendor view their own draft product', async () => {
+      const owner = await registerUser(
+        app,
+        uniqueEmail('owner-view-draft'),
+        'password123',
+        UserRole.VENDOR,
+      );
+      const product = await createProduct(app, owner.token, {
+        title: 'Owner Draft Product',
+        price: 100,
+      });
+
+      const response = await httpRequest(app)
+        .get(`/products/${product.id}`)
+        .set(authHeader(owner.token))
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        id: product.id,
+        title: 'Owner Draft Product',
+        status: 'DRAFT',
+      });
     });
   });
 });
