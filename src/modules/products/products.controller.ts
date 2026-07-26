@@ -1,4 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { Product, UserRole } from '@prisma/client';
 
@@ -15,22 +23,34 @@ import {
   CreateProductDto,
   GetProductByIdResponseDto,
   GetProductsQueryParamsDto,
+  PaginatedProductsResponseDto,
+  ProductResponseDto,
   UpdateProductDto,
   UpdateProductStatusDto,
 } from './dto';
 import { ProductsService } from './products.service';
 
+@ApiTags('products')
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
+  @ApiOperation({ summary: 'List published products' })
+  @ApiOkResponse({ type: PaginatedProductsResponseDto })
   getProducts(@Query() query: GetProductsQueryParamsDto): Promise<PaginatedResult<Product>> {
     return this.productsService.getPublishedProducts(query);
   }
 
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get a product by id',
+    description: 'Optional JWT: vendors/admins may see non-published products they own.',
+  })
+  @ApiParam({ name: 'id', description: 'Product id' })
+  @ApiOkResponse({ type: GetProductByIdResponseDto })
   getProductById(
     @Param('id') id: string,
     @CurrentUser() user: TokenPayload | null,
@@ -39,8 +59,11 @@ export class ProductsController {
   }
 
   @Post()
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: 'Create a product' })
+  @ApiCreatedResponse({ type: ProductResponseDto })
   createProduct(
     @Body() body: CreateProductDto,
     @CurrentUser() user: TokenPayload,
@@ -49,8 +72,12 @@ export class ProductsController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: 'Update product fields' })
+  @ApiParam({ name: 'id', description: 'Product id' })
+  @ApiOkResponse({ type: ProductResponseDto })
   updateProduct(
     @Param('id') id: string,
     @Body() body: UpdateProductDto,
@@ -60,8 +87,12 @@ export class ProductsController {
   }
 
   @Patch(':id/status')
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
+  @ApiOperation({ summary: 'Update product status' })
+  @ApiParam({ name: 'id', description: 'Product id' })
+  @ApiOkResponse({ type: ProductResponseDto })
   updateProductStatus(
     @Param('id') id: string,
     @Body() body: UpdateProductStatusDto,
