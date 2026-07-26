@@ -7,6 +7,7 @@ import type { TokenPayload } from '@/shared/types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
 
 import { InventoryService } from './inventory.service';
 import { UpdateInventoryDto } from './dto';
@@ -21,7 +22,7 @@ export class InventoryController {
   }
 
   @Patch('products/:productId/inventory')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VENDOR)
   updateProductInventory(
     @Param('productId') productId: string,
