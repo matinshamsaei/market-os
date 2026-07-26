@@ -8,6 +8,7 @@ import type { TokenPayload } from '@/shared/types';
 import { UsersService } from '../users/users.service';
 
 import type { AuthenticatedUserResponse, LoginUserDto, RegisterUserDto } from './dto';
+import { PUBLIC_REGISTER_ROLES } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,12 @@ export class AuthService {
   ) {}
 
   async register({ email, password, role }: RegisterUserDto): AuthenticatedUserResponse {
+    const resolvedRole = role ?? UserRole.CUSTOMER;
+
+    if (!PUBLIC_REGISTER_ROLES.includes(resolvedRole as (typeof PUBLIC_REGISTER_ROLES)[number])) {
+      throw new BadRequestException('Self-registration is only allowed for CUSTOMER and VENDOR');
+    }
+
     const existing = await this.usersService.findUserByEmail(email);
     if (existing) throw new BadRequestException('Email already exists');
 
@@ -25,9 +32,8 @@ export class AuthService {
     const user = await this.usersService.registerUser({
       email,
       password: hashedPassword,
-      role: role ?? UserRole.CUSTOMER,
+      role: resolvedRole,
     });
-
     const token = this.signToken({ userId: user.id, email: user.email, role: user.role });
 
     return {

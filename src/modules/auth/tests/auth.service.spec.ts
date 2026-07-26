@@ -71,6 +71,41 @@ describe('AuthService', () => {
         service.register({ email: 'test@test.com', password: 'password' }),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should reject self-registration as ADMIN', async () => {
+      await expect(
+        service.register({
+          email: 'admin@test.com',
+          password: 'password',
+          role: UserRole.ADMIN,
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockUsersService.registerUser).not.toHaveBeenCalled();
+    });
+
+    it('should allow self-registration as VENDOR', async () => {
+      mockUsersService.findUserByEmail.mockResolvedValue(null);
+      mockUsersService.registerUser.mockResolvedValue({
+        id: '2',
+        email: 'vendor@test.com',
+        password: 'hashed-password',
+        role: UserRole.VENDOR,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const response = await service.register({
+        email: 'vendor@test.com',
+        password: 'password',
+        role: UserRole.VENDOR,
+      });
+
+      expect(response.user.role).toBe(UserRole.VENDOR);
+      expect(mockUsersService.registerUser).toHaveBeenCalledWith(
+        expect.objectContaining({ role: UserRole.VENDOR }),
+      );
+    });
   });
 
   describe('login', () => {
