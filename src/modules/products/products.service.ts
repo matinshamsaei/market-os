@@ -33,7 +33,7 @@ export class ProductsService {
     return this.productsRepository.findAllPublishedProducts(query);
   }
 
-  async getProductById(id: string, user: TokenPayload): Promise<GetProductByIdResponseDto> {
+  async getProductById(id: string, user?: TokenPayload): Promise<GetProductByIdResponseDto> {
     const product = await this.productsRepository.findByIdWithVendor(id);
 
     if (

@@ -5,6 +5,7 @@ import { Product, UserRole } from '@prisma/client';
 import type { PaginatedResult } from '@/shared/pagination';
 import type { TokenPayload } from '@/shared/types';
 
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -29,11 +30,12 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @UseGuards(OptionalJwtAuthGuard)
   getProductById(
     @Param('id') id: string,
-    @CurrentUser() user: TokenPayload,
+    @CurrentUser() user: TokenPayload | null,
   ): Promise<GetProductByIdResponseDto> {
-    return this.productsService.getProductById(id, user);
+    return this.productsService.getProductById(id, user ?? undefined);
   }
 
   @Post()
