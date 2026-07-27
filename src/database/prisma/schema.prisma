@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// USERS
+enum UserRole {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+
+  role UserRole @default(CUSTOMER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+  carts    Cart[]
+  orders   Order[]
+  wallet   Wallet?
+
+  @@map("users")
+}
+
+// PRODUCTS
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Product {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  price       Float
+  status      ProductStatus? @default(DRAFT)
+
+  vendor   User   @relation(fields: [vendorId], references: [id])
+  vendorId String
+
+  inventory Inventory?
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
+
+  orderItems OrderItem[]
+
+  @@index([vendorId])
+  @@map("products")
+}
+
+// Inventories
+model Inventory {
+  id       String @id @default(uuid())
+  quantity Int
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String  @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inventories")
+}
+
+model Cart {
+  id String @id @default(uuid())
+
+  customer   User   @relation(fields: [customerId], references: [id])
+  customerId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartItems CartItem[]
+
+  @@index([customerId])
+  @@map("carts")
+}
+
+model CartItem {
+  id String @id @default(uuid())
+
+  cart   Cart   @relation(fields: [cartId], references: [id])
+  cartId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cart_items")
+}
+
+// Orders
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status OrderStatus @default(PENDING)
+
+  total    Float
+  subTotal Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id String @id @default(uuid())
+
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  productTitleSnapshot String
+  productPriceSnapshot Float
+
+  quantity Int
+}
+
+// Wallet
+enum WalletTransactionType {
+  DEPOSIT
+  PAYMENT
+  REFUND
+  WITHDRAWAL
+}
+
+model Wallet {
+  id      String @id @default(uuid())
+  balance Float    @default(0)
+
+  transactions WalletTransaction[]
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id String @id @default(uuid())
+
+  type   WalletTransactionType
+  amount Float
+
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([walletId, createdAt])
+  @@map("wallet_transactions")
+}

@@ -1,0 +1,135 @@
+#!/usr/bin/env sh
+
+echo "husky: running pre-commit checks (lint-staged + lint + content guards)" >&2
+
+FAIL=0
+FILES=$(git diff --cached --name-only --diff-filter=ACM)
+VIOLATION_COUNT=0
+PRINTED_VIOLATIONS_HEADER=0
+TS_PATTERNS='(^|[^[:alnum:]_])any([^[:alnum:]_]|$)|@ts-ignore|@ts-nocheck'
+GLOBAL_PATTERNS='console\\.log'
+
+get_fix_guidance() {
+  MATCHED_TOKEN="$1"
+  DEFAULT_GUIDANCE="$2"
+
+  case "$MATCHED_TOKEN" in
+    any)
+      echo "Use a specific type, a generic constraint, or 'unknown' instead of 'any'."
+    ;;
+    @ts-ignore)
+      echo "Remove '@ts-ignore' and fix the underlying type error explicitly."
+    ;;
+    @ts-nocheck)
+      echo "Remove '@ts-nocheck' and make the file pass TypeScript checks."
+    ;;
+    console.log)
+      echo "Remove debug logging or replace it with the project's approved logger."
+    ;;
+    *)
+      echo "$DEFAULT_GUIDANCE"
+    ;;
+  esac
+}
+
+print_violation() {
+  FILE_PATH="$1"
+  LINE_NUMBER="$2"
+  RULE_NAME="$3"
+  MATCHED_TOKEN="$4"
+  LINE_CONTENT="$5"
+  FIX_GUIDANCE="$6"
+
+  if [ "$PRINTED_VIOLATIONS_HEADER" -eq 0 ]; then
+    echo "husky: content guard violations:" >&2
+    PRINTED_VIOLATIONS_HEADER=1
+  fi
+
+  echo "[$RULE_NAME] $FILE_PATH:$LINE_NUMBER" >&2
+  echo "  match: $MATCHED_TOKEN" >&2
+  echo "  code : $LINE_CONTENT" >&2
+  echo "  fix  : $FIX_GUIDANCE" >&2
+  echo >&2
+}
+
+is_test_file() {
+  FILE_PATH="$1"
+
+  case "$FILE_PATH" in
+    *.test.ts|*.test.tsx|*.test.js|*.test.jsx|*.spec.ts|*.spec.tsx|*.spec.js|*.spec.jsx|*.e2e-spec.ts|*.e2e-spec.tsx|*/__tests__/*|*/__mocks__/*)
+      return 0
+    ;;
+  esac
+
+  return 1
+}
+
+scan_pattern() {
+  FILE_PATH="$1"
+  CONTENT="$2"
+  RULE_NAME="$3"
+  PATTERN="$4"
+  FIX_GUIDANCE="$5"
+
+  MATCHES=$(printf "%s\n" "$CONTENT" | grep -nE "$PATTERN" || true)
+
+  if [ -z "$MATCHES" ]; then
+    return 1
+  fi
+
+  MATCH_COUNT=$(printf "%s\n" "$MATCHES" | wc -l | tr -d ' ')
+  VIOLATION_COUNT=$((VIOLATION_COUNT + MATCH_COUNT))
+
+  OLD_IFS=$IFS
+  IFS='
+'
+  for MATCH in $MATCHES; do
+    IFS=$OLD_IFS
+    LINE_NUMBER=${MATCH%%:*}
+    LINE_CONTENT=${MATCH#*:}
+    MATCHED_TOKEN=$(printf "%s\n" "$LINE_CONTENT" | grep -oE "$PATTERN" | head -n 1)
+    print_violation "$FILE_PATH" "$LINE_NUMBER" "$RULE_NAME" "$MATCHED_TOKEN" "$LINE_CONTENT" "$(get_fix_guidance "$MATCHED_TOKEN" "$FIX_GUIDANCE")"
+    IFS='
+'
+  done
+  IFS=$OLD_IFS
+
+  return 0
+}
+
+if ! npx lint-staged; then
+  echo "husky: staged formatting/lint fixes failed. Resolve the reported issues and retry the commit." >&2
+  FAIL=1
+fi
+
+for FILE in $FILES; do
+  CONTENT=$(git show ":$FILE" 2>/dev/null)
+
+  if scan_pattern "$FILE" "$CONTENT" "no-console-log" "$GLOBAL_PATTERNS" "Remove debug logging or replace it with the project's approved logger."; then
+    FAIL=1
+  fi
+
+  case "$FILE" in
+    *.ts|*.tsx)
+      if is_test_file "$FILE"; then
+        continue
+      fi
+
+      if scan_pattern "$FILE" "$CONTENT" "no-unsafe-typescript" "$TS_PATTERNS" "Replace 'any' with a precise type or 'unknown', and remove TypeScript suppression comments."; then
+        FAIL=1
+      fi
+    ;;
+  esac
+done
+
+if [ "$FAIL" -ne 0 ]; then
+  if [ "$VIOLATION_COUNT" -gt 0 ]; then
+    echo "husky: blocked commit. $VIOLATION_COUNT content guard violation(s) found in staged changes." >&2
+  else
+    echo "husky: blocked commit due to failed checks." >&2
+  fi
+  exit 1
+fi
+
+echo "husky: pre-commit passed." >&2
+exit 0

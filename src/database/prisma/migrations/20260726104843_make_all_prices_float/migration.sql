@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "wallet_transactions" ALTER COLUMN "amount" SET DATA TYPE DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "wallets" ALTER COLUMN "balance" SET DEFAULT 0,
+ALTER COLUMN "balance" SET DATA TYPE DOUBLE PRECISION;
