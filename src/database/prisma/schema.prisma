@@ -131,6 +131,7 @@ model Order {
   updatedAt DateTime @updatedAt
 
   orderItems OrderItem[]
+  payments   Payment[]
 
   @@map("orders")
 }
@@ -186,4 +187,41 @@ model WalletTransaction {
 
   @@index([walletId, createdAt])
   @@map("wallet_transactions")
+}
+
+// Payments
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProviderType {
+  FAKE
+  STRIPE
+  ZARINPAL
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  provider          PaymentProviderType
+  providerPaymentId String?
+  status            PaymentStatus       @default(PENDING)
+  amount            Float
+  currency          String              @default("IRR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([providerPaymentId])
+  @@index([status])
+  @@map("payments")
 }
