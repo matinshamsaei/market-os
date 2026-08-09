@@ -3,7 +3,7 @@ import { User, UserRole } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../shared/types';
 
 import { UsersService } from '../users/users.service';
 

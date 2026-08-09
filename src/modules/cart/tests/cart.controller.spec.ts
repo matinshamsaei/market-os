@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../../shared/types';
 
 import { CartController } from '../cart.controller';
 import { CartService } from '../cart.service';

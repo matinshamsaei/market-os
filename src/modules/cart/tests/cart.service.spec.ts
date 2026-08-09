@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductStatus, UserRole } from '@prisma/client';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../../shared/types';
 
 import { CartService } from '../cart.service';
 import { CartRepository } from '../cart.repository';

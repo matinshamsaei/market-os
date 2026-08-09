@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
+import { PrismaService } from '../../database/prisma/prisma.service';
 
 import { WalletRepository } from '../wallet/wallet.repository';
 import { UsersRepository } from './users.repository';

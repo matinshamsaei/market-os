@@ -10,8 +10,8 @@ import {
 
 import { Product, UserRole } from '@prisma/client';
 
-import type { PaginatedResult } from '@/shared/pagination';
-import type { TokenPayload } from '@/shared/types';
+import type { PaginatedResult } from '../../shared/pagination';
+import type { TokenPayload } from '../../shared/types';
 
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';

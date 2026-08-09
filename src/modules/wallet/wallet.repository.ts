@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { Prisma, Wallet, WalletTransaction, WalletTransactionType } from '@prisma/client';
 
-import { paginate, type PaginatedResult } from '@/shared/pagination';
-import { PrismaService } from '@/database/prisma/prisma.service';
+import { paginate, type PaginatedResult } from '../../shared/pagination';
+import { PrismaService } from '../../database/prisma/prisma.service';
 
 import { GetWalletTransactionsQueryDto } from './dto';
 

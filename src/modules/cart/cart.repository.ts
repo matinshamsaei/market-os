@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { Prisma, ProductStatus } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
+import { PrismaService } from '../../database/prisma/prisma.service';
 
 import type { CustomerCart, AvailableProduct, OwnedCartItem, ExistingCartItem } from './types';
 

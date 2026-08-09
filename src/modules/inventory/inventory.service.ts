@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../shared/types';
 
 import { InventoryRepository } from './inventory.repository';
 import type { CreateInventoryDto, UpdateInventoryDto } from './dto';

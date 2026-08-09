@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole, WalletTransactionType } from '@prisma/client';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../../shared/types';
 
 import { WalletController } from '../wallet.controller';
 import { WalletService } from '../wallet.service';

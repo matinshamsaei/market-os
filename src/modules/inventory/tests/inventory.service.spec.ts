@@ -2,7 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../../shared/types';
 
 import { InventoryRepository } from '../inventory.repository';
 import { InventoryService } from '../inventory.service';

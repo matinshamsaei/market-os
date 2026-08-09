@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 import { UserRole } from '@prisma/client';
 import { Reflector } from '@nestjs/core';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../../shared/types';
 
 import { ROLES_KEY } from '../decorators/roles.decorator';
 

@@ -11,7 +11,7 @@ import {
 
 import { Order, UserRole } from '@prisma/client';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../shared/types';
 
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

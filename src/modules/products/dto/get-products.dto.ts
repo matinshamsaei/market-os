@@ -2,7 +2,7 @@ import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductStatus } from '@prisma/client';
 
-import { PaginationMetaDto, PaginationQueryParamsDto } from '@/shared/pagination';
+import { PaginationMetaDto, PaginationQueryParamsDto } from '../../../shared/pagination';
 
 import { PRODUCT_SORT_FIELDS } from '../constants';
 

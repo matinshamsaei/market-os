@@ -2,7 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
+import { PrismaService } from '../../../database/prisma/prisma.service';
 
 import { WalletRepository } from '../../wallet/wallet.repository';
 import { UsersService } from '../users.service';

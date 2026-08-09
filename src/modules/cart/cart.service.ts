@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type { TokenPayload } from '@/shared/types';
+import type { TokenPayload } from '../../shared/types';
 
 import { AddToCartDto, GetCartResponse, UpdateCartItemDto } from './dto';
 import type { AvailableProduct, CustomerCart } from './types';

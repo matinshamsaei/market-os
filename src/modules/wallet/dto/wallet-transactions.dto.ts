@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDateString, IsEnum, IsOptional } from 'class-validator';
 import { WalletTransactionType } from '@prisma/client';
 
-import { PaginationMetaDto, PaginationQueryParamsDto } from '@/shared/pagination';
+import { PaginationMetaDto, PaginationQueryParamsDto } from '../../../shared/pagination';
 
 export class GetWalletTransactionsQueryDto extends PaginationQueryParamsDto {
   @ApiPropertyOptional({ enum: WalletTransactionType, example: WalletTransactionType.DEPOSIT })

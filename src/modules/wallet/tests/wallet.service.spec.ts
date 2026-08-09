@@ -2,8 +2,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole, WalletTransactionType } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
-import type { TokenPayload } from '@/shared/types';
+import { PrismaService } from '../../../database/prisma/prisma.service';
+import type { TokenPayload } from '../../../shared/types';
 
 import { WalletRepository } from '../wallet.repository';
 import { WalletService } from '../wallet.service';

@@ -4,11 +4,11 @@ import { ProductStatus } from '@prisma/client';
 
 import type { Prisma, Product } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
-import { buildOrderBy } from '@/shared/pagination/utils';
-import { paginate } from '@/shared/pagination';
+import { PrismaService } from '../../database/prisma/prisma.service';
+import { buildOrderBy } from '../../shared/pagination/utils';
+import { paginate } from '../../shared/pagination';
 
-import type { PaginatedResult } from '@/shared/pagination';
+import type { PaginatedResult } from '../../shared/pagination';
 
 import { GetProductsQueryParamsDto, PublicVendorDto } from './dto';
 import { PRODUCT_SORT_FIELDS } from './constants';

@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 
 import { Product, ProductStatus, UserRole } from '@prisma/client';
-import { PaginatedResult } from '@/shared/pagination';
-import type { TokenPayload } from '@/shared/types';
-import { isObjectEmpty } from '@/shared/utils';
+import { PaginatedResult } from '../../shared/pagination';
+import type { TokenPayload } from '../../shared/types';
+import { isObjectEmpty } from '../../shared/utils';
 
 import { InventoryService } from '../inventory/inventory.service';
 

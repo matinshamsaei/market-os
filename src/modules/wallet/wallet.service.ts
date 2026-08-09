@@ -2,9 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 
 import { Prisma, Wallet, WalletTransaction } from '@prisma/client';
 
-import { PrismaService } from '@/database/prisma/prisma.service';
-import type { PaginatedResult } from '@/shared/pagination';
-import type { TokenPayload } from '@/shared/types';
+import { PrismaService } from '../../database/prisma/prisma.service';
+import type { PaginatedResult } from '../../shared/pagination';
+import type { TokenPayload } from '../../shared/types';
 
 import { DepositDto, GetWalletTransactionsQueryDto } from './dto';
 import { WalletRepository } from './wallet.repository';

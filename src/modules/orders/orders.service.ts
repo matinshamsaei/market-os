@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 
 import { Order, OrderStatus, Prisma, UserRole } from '@prisma/client';
-import { PrismaService } from '@/database/prisma/prisma.service';
-import type { TokenPayload } from '@/shared/types';
+import { PrismaService } from '../../database/prisma/prisma.service';
+import type { TokenPayload } from '../../shared/types';
 
 import { InventoryService } from '../inventory/inventory.service';
 import { WalletService } from '../wallet/wallet.service';
