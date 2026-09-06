@@ -170,4 +170,50 @@ describe('ZarinpalProvider', () => {
       }),
     ).rejects.toThrow(BadGatewayException);
   });
+
+  it('verifies a successful Zarinpal webhook via capture', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => ({
+        data: { code: 100 },
+      }),
+    });
+
+    const rawBody = JSON.stringify({
+      authority: 'A00000000000000000000000000000000001',
+      status: 'OK',
+      amount: 15000,
+      eventId: 'evt_zarinpal_1',
+    });
+
+    await expect(
+      provider.verifyWebhook({
+        rawBody,
+      }),
+    ).resolves.toEqual({
+      eventId: 'evt_zarinpal_1',
+      type: 'payment.succeeded',
+      providerPaymentId: 'A00000000000000000000000000000000001',
+      amount: 15000,
+    });
+  });
+
+  it('maps failed Zarinpal webhook status without calling capture', async () => {
+    const rawBody = JSON.stringify({
+      authority: 'A00000000000000000000000000000000001',
+      status: 'NOK',
+    });
+
+    await expect(
+      provider.verifyWebhook({
+        rawBody,
+      }),
+    ).resolves.toEqual({
+      eventId: expect.stringMatching(/^zarinpal_/),
+      type: 'payment.failed',
+      providerPaymentId: 'A00000000000000000000000000000000001',
+      amount: undefined,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

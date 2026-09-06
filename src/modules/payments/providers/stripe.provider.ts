@@ -6,8 +6,10 @@ import type {
   CreatePaymentInput,
   CreatePaymentResult,
   PaymentProvider,
+  PaymentWebhookEvent,
   RefundPaymentInput,
   RefundPaymentResult,
+  VerifyWebhookInput,
 } from './types';
 
 @Injectable()
@@ -22,5 +24,9 @@ export class StripeProvider implements PaymentProvider {
 
   refund(_input: RefundPaymentInput): Promise<RefundPaymentResult> {
     throw new NotImplementedException('Stripe provider is not configured');
+  }
+
+  verifyWebhook(_input: VerifyWebhookInput): Promise<PaymentWebhookEvent> {
+    throw new NotImplementedException('Stripe webhook verification is not configured');
   }
 }

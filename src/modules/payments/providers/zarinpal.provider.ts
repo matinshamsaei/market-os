@@ -1,5 +1,12 @@
-import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 
 import type {
   CapturePaymentInput,
@@ -7,8 +14,10 @@ import type {
   CreatePaymentInput,
   CreatePaymentResult,
   PaymentProvider,
+  PaymentWebhookEvent,
   RefundPaymentInput,
   RefundPaymentResult,
+  VerifyWebhookInput,
 } from './types';
 
 type ZarinpalDataResponse<T> = {
@@ -112,6 +121,88 @@ export class ZarinpalProvider implements PaymentProvider {
         response.data?.ref_id ?? `zarinpal_refund_${input.providerPaymentId}`,
       ),
     };
+  }
+
+  async verifyWebhook(input: VerifyWebhookInput): Promise<PaymentWebhookEvent> {
+    this.assertWebhookSignature(input.rawBody, input.signature);
+
+    let payload: Record<string, unknown>;
+
+    try {
+      payload = JSON.parse(input.rawBody) as Record<string, unknown>;
+    } catch {
+      throw new UnauthorizedException('Invalid webhook payload');
+    }
+
+    const authority =
+      (typeof payload.authority === 'string' && payload.authority) ||
+      (typeof payload.providerPaymentId === 'string' && payload.providerPaymentId) ||
+      undefined;
+    const status = typeof payload.status === 'string' ? payload.status.toUpperCase() : undefined;
+    const amount = typeof payload.amount === 'number' ? payload.amount : undefined;
+    const eventId =
+      typeof payload.eventId === 'string' ? payload.eventId : `zarinpal_${randomUUID()}`;
+
+    if (!authority || !status) {
+      throw new UnauthorizedException('Invalid Zarinpal webhook event');
+    }
+
+    if (status === 'OK' || status === 'SUCCESS') {
+      if (amount == null) {
+        throw new UnauthorizedException('Zarinpal success events require amount');
+      }
+
+      const capture = await this.capture({ providerPaymentId: authority, amount });
+
+      if (!capture.success) {
+        throw new UnauthorizedException('Zarinpal payment could not be verified');
+      }
+
+      return {
+        eventId,
+        type: 'payment.succeeded',
+        providerPaymentId: authority,
+        amount,
+      };
+    }
+
+    if (status === 'NOK' || status === 'FAILED') {
+      return {
+        eventId,
+        type: 'payment.failed',
+        providerPaymentId: authority,
+        amount,
+      };
+    }
+
+    throw new UnauthorizedException(`Unsupported Zarinpal webhook status: ${status}`);
+  }
+
+  private assertWebhookSignature(rawBody: string, signature?: string): void {
+    const secret = this.configService.get<string>('PAYMENT_WEBHOOK_SECRET');
+
+    // Zarinpal callbacks are verified via their verify API; shared secret is optional.
+    if (!secret) {
+      return;
+    }
+
+    if (!signature) {
+      throw new UnauthorizedException('Missing webhook signature');
+    }
+
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    try {
+      if (!timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) {
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
   }
 
   private requireMerchantId(): string {

@@ -1,13 +1,26 @@
+import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHmac } from 'crypto';
 
 import { FakeProvider } from '../fake.provider';
 
 describe('FakeProvider', () => {
   let provider: FakeProvider;
 
+  const secret = 'test-webhook-secret';
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [FakeProvider],
+      providers: [
+        FakeProvider,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: (key: string) => (key === 'PAYMENT_WEBHOOK_SECRET' ? secret : undefined),
+          },
+        },
+      ],
     }).compile();
 
     provider = module.get(FakeProvider);
@@ -36,5 +49,55 @@ describe('FakeProvider', () => {
     const result = await provider.refund({ providerPaymentId: 'fake_123', amount: 50 });
 
     expect(result.providerRefundId).toMatch(/^fake_refund_/);
+  });
+
+  it('verifies a signed webhook payload', async () => {
+    const rawBody = JSON.stringify({
+      eventId: 'evt_1',
+      type: 'payment.succeeded',
+      providerPaymentId: 'fake_123',
+      amount: 100,
+    });
+    const signature = createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    await expect(
+      provider.verifyWebhook({
+        rawBody,
+        signature,
+      }),
+    ).resolves.toEqual({
+      eventId: 'evt_1',
+      type: 'payment.succeeded',
+      providerPaymentId: 'fake_123',
+      amount: 100,
+    });
+  });
+
+  it('rejects webhooks with an invalid signature', async () => {
+    const rawBody = JSON.stringify({
+      eventId: 'evt_1',
+      type: 'payment.succeeded',
+      providerPaymentId: 'fake_123',
+      amount: 100,
+    });
+
+    await expect(
+      provider.verifyWebhook({
+        rawBody,
+        signature: 'invalid',
+      }),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects webhooks with an invalid event shape', async () => {
+    const rawBody = JSON.stringify({ eventId: 'evt_1' });
+    const signature = createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    await expect(
+      provider.verifyWebhook({
+        rawBody,
+        signature,
+      }),
+    ).rejects.toThrow(UnauthorizedException);
   });
 });

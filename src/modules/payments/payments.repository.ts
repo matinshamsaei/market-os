@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
-import { Payment, PaymentStatus, Prisma } from '@prisma/client';
+import { Order, Payment, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@/database/prisma/prisma.service';
+
+type PaymentWithOrder = Payment & { order: Order };
 
 @Injectable()
 export class PaymentsRepository {
@@ -30,6 +32,16 @@ export class PaymentsRepository {
   findByProviderPaymentId(providerPaymentId: string): Promise<Payment | null> {
     return this.prisma.payment.findFirst({
       where: { providerPaymentId },
+    });
+  }
+
+  findByProviderPaymentIdForUpdate(
+    transaction: Prisma.TransactionClient,
+    providerPaymentId: string,
+  ): Promise<PaymentWithOrder | null> {
+    return transaction.payment.findFirst({
+      where: { providerPaymentId },
+      include: { order: true },
     });
   }
 
