@@ -31,6 +31,23 @@ export interface RefundPaymentResult {
   providerRefundId: string;
 }
 
+export type ProviderPaymentStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'REFUNDED';
+
+export interface GetPaymentStatusInput {
+  providerPaymentId: string;
+  amount?: number;
+}
+
+export interface GetPaymentStatusResult {
+  status: ProviderPaymentStatus;
+}
+
 export type PaymentWebhookEventType =
   | 'payment.succeeded'
   | 'payment.failed'
@@ -55,4 +72,5 @@ export interface PaymentProvider {
   capture(input: CapturePaymentInput): Promise<CapturePaymentResult>;
   refund(input: RefundPaymentInput): Promise<RefundPaymentResult>;
   verifyWebhook(input: VerifyWebhookInput): Promise<PaymentWebhookEvent>;
+  getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusResult>;
 }

@@ -5,6 +5,8 @@ import type {
   CapturePaymentResult,
   CreatePaymentInput,
   CreatePaymentResult,
+  GetPaymentStatusInput,
+  GetPaymentStatusResult,
   PaymentProvider,
   PaymentWebhookEvent,
   RefundPaymentInput,
@@ -28,5 +30,9 @@ export class StripeProvider implements PaymentProvider {
 
   verifyWebhook(_input: VerifyWebhookInput): Promise<PaymentWebhookEvent> {
     throw new NotImplementedException('Stripe webhook verification is not configured');
+  }
+
+  getPaymentStatus(_input: GetPaymentStatusInput): Promise<GetPaymentStatusResult> {
+    throw new NotImplementedException('Stripe payment status is not configured');
   }
 }

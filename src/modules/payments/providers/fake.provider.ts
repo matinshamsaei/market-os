@@ -2,13 +2,17 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 
+import { TransientPaymentError } from '../helpers/payment-retry.policy';
 import type {
   CapturePaymentInput,
   CapturePaymentResult,
   CreatePaymentInput,
   CreatePaymentResult,
+  GetPaymentStatusInput,
+  GetPaymentStatusResult,
   PaymentProvider,
   PaymentWebhookEvent,
+  ProviderPaymentStatus,
   RefundPaymentInput,
   RefundPaymentResult,
   VerifyWebhookInput,
@@ -23,10 +27,27 @@ const WEBHOOK_EVENT_TYPES = new Set([
 
 @Injectable()
 export class FakeProvider implements PaymentProvider {
+  private readonly statuses = new Map<string, ProviderPaymentStatus>();
+  private createFailuresRemaining = 0;
+
   constructor(private readonly configService: ConfigService) {}
 
+  simulateTransientFailures(count: number): void {
+    this.createFailuresRemaining = count;
+  }
+
+  setPaymentStatus(providerPaymentId: string, status: ProviderPaymentStatus): void {
+    this.statuses.set(providerPaymentId, status);
+  }
+
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
+    if (this.createFailuresRemaining > 0) {
+      this.createFailuresRemaining -= 1;
+      throw new TransientPaymentError('Gateway timeout');
+    }
+
     const providerPaymentId = `fake_${randomUUID()}`;
+    this.statuses.set(providerPaymentId, 'PROCESSING');
 
     return Promise.resolve({
       providerPaymentId,
@@ -34,12 +55,20 @@ export class FakeProvider implements PaymentProvider {
     });
   }
 
-  async capture(_input: CapturePaymentInput): Promise<CapturePaymentResult> {
+  async capture(input: CapturePaymentInput): Promise<CapturePaymentResult> {
+    this.statuses.set(input.providerPaymentId, 'SUCCEEDED');
     return Promise.resolve({ success: true });
   }
 
-  async refund(_input: RefundPaymentInput): Promise<RefundPaymentResult> {
+  async refund(input: RefundPaymentInput): Promise<RefundPaymentResult> {
+    this.statuses.set(input.providerPaymentId, 'REFUNDED');
     return Promise.resolve({ providerRefundId: `fake_refund_${randomUUID()}` });
+  }
+
+  async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusResult> {
+    return Promise.resolve({
+      status: this.statuses.get(input.providerPaymentId) ?? 'PROCESSING',
+    });
   }
 
   async verifyWebhook(input: VerifyWebhookInput): Promise<PaymentWebhookEvent> {
@@ -71,9 +100,12 @@ export class FakeProvider implements PaymentProvider {
       throw new UnauthorizedException('Invalid webhook event');
     }
 
+    const eventType = type as PaymentWebhookEvent['type'];
+    this.statuses.set(providerPaymentId, this.mapEventToProviderStatus(eventType));
+
     return Promise.resolve({
       eventId,
-      type: type as PaymentWebhookEvent['type'],
+      type: eventType,
       providerPaymentId,
       amount,
     });
@@ -87,6 +119,21 @@ export class FakeProvider implements PaymentProvider {
     }
 
     return createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+  }
+
+  private mapEventToProviderStatus(type: PaymentWebhookEvent['type']): ProviderPaymentStatus {
+    switch (type) {
+      case 'payment.succeeded':
+        return 'SUCCEEDED';
+      case 'payment.failed':
+        return 'FAILED';
+      case 'payment.cancelled':
+        return 'CANCELLED';
+      case 'payment.refunded':
+        return 'REFUNDED';
+      default:
+        return 'PROCESSING';
+    }
   }
 
   private isValidSignature(rawBody: string, signature: string, secret: string): boolean {

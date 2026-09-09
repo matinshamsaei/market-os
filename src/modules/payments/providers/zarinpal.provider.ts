@@ -8,11 +8,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 
+import { TransientPaymentError } from '../helpers';
 import type {
   CapturePaymentInput,
   CapturePaymentResult,
   CreatePaymentInput,
   CreatePaymentResult,
+  GetPaymentStatusInput,
+  GetPaymentStatusResult,
   PaymentProvider,
   PaymentWebhookEvent,
   RefundPaymentInput,
@@ -178,6 +181,19 @@ export class ZarinpalProvider implements PaymentProvider {
     throw new UnauthorizedException(`Unsupported Zarinpal webhook status: ${status}`);
   }
 
+  async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusResult> {
+    if (input.amount == null) {
+      return { status: 'PROCESSING' };
+    }
+
+    const capture = await this.capture({
+      providerPaymentId: input.providerPaymentId,
+      amount: input.amount,
+    });
+
+    return { status: capture.success ? 'SUCCEEDED' : 'FAILED' };
+  }
+
   private assertWebhookSignature(rawBody: string, signature?: string): void {
     const secret = this.configService.get<string>('PAYMENT_WEBHOOK_SECRET');
 
@@ -272,7 +288,7 @@ export class ZarinpalProvider implements PaymentProvider {
       });
     } catch (error) {
       this.logger.error(`Zarinpal network error on ${path}`, error);
-      throw new BadGatewayException('Unable to reach Zarinpal');
+      throw new TransientPaymentError('Unable to reach Zarinpal', { cause: error });
     }
 
     let payload: T;
