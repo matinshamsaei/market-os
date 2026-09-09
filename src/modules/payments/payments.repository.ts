@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { Order, Payment, PaymentStatus, Prisma } from '@prisma/client';
+import { Order, Payment, PaymentProviderType, PaymentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '@/database/prisma/prisma.service';
 
 type PaymentWithOrder = Payment & { order: Order };
@@ -17,8 +17,21 @@ export class PaymentsRepository {
     return this.prisma.payment.findUnique({ where: { id } });
   }
 
-  findByIdForUpdate(transaction: Prisma.TransactionClient, id: string): Promise<Payment | null> {
-    return transaction.payment.findUnique({ where: { id } });
+  findByIdWithOrder(id: string): Promise<PaymentWithOrder | null> {
+    return this.prisma.payment.findUnique({
+      where: { id },
+      include: { order: true },
+    });
+  }
+
+  findByIdForUpdate(
+    transaction: Prisma.TransactionClient,
+    id: string,
+  ): Promise<PaymentWithOrder | null> {
+    return transaction.payment.findUnique({
+      where: { id },
+      include: { order: true },
+    });
   }
 
   update(
@@ -45,6 +58,25 @@ export class PaymentsRepository {
     });
   }
 
+  findFailed(): Promise<Payment[]> {
+    return this.prisma.payment.findMany({
+      where: { status: PaymentStatus.FAILED },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findProcessingOlderThan(cutoff: Date): Promise<PaymentWithOrder[]> {
+    return this.prisma.payment.findMany({
+      where: {
+        status: PaymentStatus.PROCESSING,
+        updatedAt: { lte: cutoff },
+        providerPaymentId: { not: null },
+      },
+      include: { order: true },
+      orderBy: { updatedAt: 'asc' },
+    });
+  }
+
   async hasActivePayment(orderId: string): Promise<boolean> {
     return this.prisma.payment
       .findFirst({
@@ -54,5 +86,28 @@ export class PaymentsRepository {
         },
       })
       .then((payment) => payment !== null);
+  }
+
+  findProcessedWebhook(
+    transaction: Prisma.TransactionClient,
+    provider: PaymentProviderType,
+    eventId: string,
+  ) {
+    return transaction.processedPaymentWebhook.findUnique({
+      where: {
+        provider_eventId: { provider, eventId },
+      },
+    });
+  }
+
+  createProcessedWebhook(
+    transaction: Prisma.TransactionClient,
+    data: {
+      provider: PaymentProviderType;
+      eventId: string;
+      paymentId: string;
+    },
+  ) {
+    return transaction.processedPaymentWebhook.create({ data });
   }
 }

@@ -6,7 +6,18 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Body, Controller, Headers, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
@@ -17,7 +28,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { CreatePaymentDto, CreatePaymentResponseDto, WebhookResponseDto } from './dto';
+import {
+  CreatePaymentDto,
+  CreatePaymentResponseDto,
+  PaymentResponseDto,
+  WebhookResponseDto,
+} from './dto';
 import { PaymentsService } from './payments.service';
 
 @ApiTags('payments')
@@ -52,5 +68,28 @@ export class PaymentsController {
     const rawBody = req.rawBody?.toString('utf8') ?? JSON.stringify(req.body ?? {});
 
     return this.paymentsService.handleWebhook(rawBody, signature, providerHint);
+  }
+
+  @Get('failed')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'List failed payments' })
+  @ApiOkResponse({ type: PaymentResponseDto, isArray: true })
+  listFailedPayments(@CurrentUser() user: TokenPayload): Promise<PaymentResponseDto[]> {
+    return this.paymentsService.listFailedPayments(user);
+  }
+
+  @Post(':id/retry')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Retry a failed payment' })
+  @ApiCreatedResponse({ type: CreatePaymentResponseDto })
+  retryFailedPayment(
+    @CurrentUser() user: TokenPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<CreatePaymentResponseDto> {
+    return this.paymentsService.retryFailedPayment(id, user);
   }
 }

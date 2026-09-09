@@ -8,6 +8,7 @@ import { WalletModule } from '../wallet/wallet.module';
 
 import { PaymentsController } from './payments.controller';
 import { PaymentStateMachine } from './helpers';
+import { PaymentsReconciliationJob } from './jobs/payments-reconciliation.job';
 import {
   FakeProvider,
   PaymentProviderFactory,
@@ -28,7 +29,8 @@ import { PaymentsService } from './payments.service';
     StripeProvider,
     ZarinpalProvider,
     PaymentStateMachine,
+    PaymentsReconciliationJob,
   ],
-  exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory],
+  exports: [PaymentsService, PaymentsRepository, PaymentProviderFactory, FakeProvider],
 })
 export class PaymentsModule {}
