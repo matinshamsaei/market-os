@@ -216,12 +216,31 @@ model Payment {
   status            PaymentStatus       @default(PENDING)
   amount            Float
   currency          String              @default("IRR")
+  attemptCount      Int                 @default(1)
+  lastError         String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  webhookEvents ProcessedPaymentWebhook[]
 
   @@index([orderId])
   @@index([providerPaymentId])
   @@index([status])
   @@map("payments")
+}
+
+model ProcessedPaymentWebhook {
+  id String @id @default(uuid())
+
+  provider  PaymentProviderType
+  eventId   String
+  paymentId String?
+  payment   Payment?            @relation(fields: [paymentId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+  @@index([paymentId])
+  @@map("processed_payment_webhooks")
 }
