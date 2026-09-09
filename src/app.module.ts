@@ -1,4 +1,5 @@
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { Module } from '@nestjs/common';
 
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
     AuthModule,
 
     PrismaModule,
+    ScheduleModule.forRoot(),
 
     ConfigModule.forRoot({
       isGlobal: true,
