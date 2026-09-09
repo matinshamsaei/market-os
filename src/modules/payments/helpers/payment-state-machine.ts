@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { PaymentStatus } from '@prisma/client';
 
@@ -27,5 +27,15 @@ export class PaymentStateMachine {
     }
 
     return this.allowedTransitions[from]?.includes(to) ?? false;
+  }
+
+  assertCanTransition(from: PaymentStatus, to: PaymentStatus): void {
+    if (from === to) {
+      return;
+    }
+
+    if (!this.canTransition(from, to)) {
+      throw new BadRequestException(`Cannot change payment from ${from} to ${to}`);
+    }
   }
 }
